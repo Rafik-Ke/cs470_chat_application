@@ -13,6 +13,7 @@ public class TestClient {
 			ca.client();
 	}
 
+	@SuppressWarnings("resource")
 	public void client() throws Exception {
 		Socket socket = new Socket("localhost", 50001);
 		PrintStream ps = new PrintStream(socket.getOutputStream());

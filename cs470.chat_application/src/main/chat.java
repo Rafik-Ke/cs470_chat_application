@@ -14,7 +14,12 @@ public class chat {
 	}
 	
 	public void help(){
-		System.out.println("help");
+		System.out.println("help"
+				+ ""
+				+ ""
+				+ ""
+				+ ""
+				+ "");
 		
 		
 	}

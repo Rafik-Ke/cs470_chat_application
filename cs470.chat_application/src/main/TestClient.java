@@ -15,7 +15,7 @@ public class TestClient {
 
 	@SuppressWarnings("resource")
 	public void client() throws Exception {
-		Socket socket = new Socket("localhost", 50001);
+		Socket socket = new Socket("10.85.57.86", 50001);
 		PrintStream ps = new PrintStream(socket.getOutputStream());
 		ps.println("hello to server from client , message : " + ++i);
 

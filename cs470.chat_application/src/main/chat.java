@@ -9,6 +9,26 @@ public class chat {
 		//print the ip address
 		System.out.println(Inet4Address.getLocalHost().getHostAddress());
 		
+		chat chatApp = new chat();
+		chatApp.help();
+	}
+	
+	public void help(){
+		System.out.println("help");
+		
+		
+	}
+	
+	public void myip(){
+		
+	}
+	
+	public void myport(){
+		
+	}
+	
+	public void connect(){
+		
 	}
 
 }

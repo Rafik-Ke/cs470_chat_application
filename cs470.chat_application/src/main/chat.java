@@ -6,11 +6,11 @@ import java.net.*;
 public class chat {
 
 	public static void main(String[] args) throws Exception {
-		//print the ip address
-		System.out.println(Inet4Address.getLocalHost().getHostAddress());
+		
 		
 		chat chatApp = new chat();
 		chatApp.help();
+		chatApp.myip();
 	}
 	
 	public void help(){
@@ -19,8 +19,9 @@ public class chat {
 		
 	}
 	
-	public void myip(){
-		
+	//print the ip address
+	public void myip() throws UnknownHostException{
+		System.out.println("The IP address is " + Inet4Address.getLocalHost().getHostAddress());
 	}
 	
 	public void myport(){

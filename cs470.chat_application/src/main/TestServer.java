@@ -14,6 +14,8 @@ public class TestServer {
 
 	@SuppressWarnings("resource")
 	public void server() throws Exception {
+		
+		//tcp socket
 		ServerSocket srvSocket = new ServerSocket(50001);
 		Socket socket = null;
 		while (true) {

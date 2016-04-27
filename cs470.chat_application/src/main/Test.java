@@ -3,7 +3,9 @@ package main;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -26,6 +28,7 @@ public class Test {
 		Test test = new Test();
 
 		test.serverRunner();
+
 		System.out.println(test.i);
 
 		test.takeInput();
@@ -36,18 +39,31 @@ public class Test {
 
 	}
 
-	public void takeInput() throws IOException {
+	public void takeInput() throws Exception {
 
 		Scanner keyboard;
 		String input;
+		String[] command;
 		System.out.println("enter something");
 		while (!exit) {
 			keyboard = new Scanner(System.in);
 			input = keyboard.nextLine();
-			if (input.equals("exit")) {
+			input = input.toLowerCase().trim();
+			command = input.split("\\s+");
+			switch (command[0]) {
+			
+			case "connect":
+				client();
+				break;
+
+			case "exit":
 				exit = true;
 				// socket.close();
 				srvSocket.close();
+				break;
+				
+				
+
 			}
 		}
 	}
@@ -64,8 +80,7 @@ public class Test {
 		};
 		t.start();
 	}
-
-	@SuppressWarnings("resource")
+	
 	public void server() throws Exception {
 		// tcp socket
 		srvSocket = new ServerSocket(50001);
@@ -74,7 +89,8 @@ public class Test {
 			while (!exit) {
 				socket = srvSocket.accept();
 				socketList.add(socket);
-				System.out.println("New connection from: " + socket.getLocalAddress().getHostName());
+				
+				System.out.println("New connection from: " + socket.getRemoteSocketAddress());
 
 				InputStreamReader instrReader = new InputStreamReader(socket.getInputStream());
 				BufferedReader br = new BufferedReader(instrReader);
@@ -93,5 +109,25 @@ public class Test {
 				socket.close();
 		}
 	}
+	
+	@SuppressWarnings("resource")
+	public void client() throws Exception {
+		Socket socket  = null;
+		OutputStream os;
+		PrintWriter pw;
+		socket = new Socket("192.168.1.67", 50001);
+		
+		PrintStream ps = new PrintStream(socket.getOutputStream());
+		ps.println("hello to server from client , message : " + ++i);
+		
+		
+		InputStreamReader instrReader = new InputStreamReader(socket.getInputStream());
+		BufferedReader br = new BufferedReader(instrReader);
+
+		String msg = br.readLine();
+		System.out.println(msg);
+	}
+
+
 
 }

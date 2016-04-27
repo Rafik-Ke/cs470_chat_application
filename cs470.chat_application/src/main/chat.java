@@ -16,9 +16,6 @@ public class chat {
 
 		// socket.getRemoteSocketAddress().toString();
 
-		// System.out.println("The IP address is " +
-		// InetAddress.getLocalHost().getHostAddress());
-
 			chat chatApp = new chat();
 			try {
 		//		chatApp.portNumber = Integer.parseInt(args[0]);
@@ -204,6 +201,7 @@ public class chat {
 
 	public void exit() {
 		// close the connection
+	//	srvSocket.close();
 		System.out.println("exit");
 	}
 

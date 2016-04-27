@@ -9,22 +9,33 @@ import java.util.Scanner;
 public class chat {
 	private int portNumber = 50001;
 	private String ipAddress;
+	private boolean exit = false;
 
 	public static void main(String[] args) throws Exception {
+
 
 		// socket.getRemoteSocketAddress().toString();
 
 		// System.out.println("The IP address is " +
 		// InetAddress.getLocalHost().getHostAddress());
 
-		chat chatApp = new chat();
-
-		chatApp.takeInput();
-
+			chat chatApp = new chat();
+			try {
+		//		chatApp.portNumber = Integer.parseInt(args[0]);
+				chatApp.takeInput();
+/*				chatApp.server();
+				chatApp.client();*/
+				
+			} catch (Exception e) {
+				e.printStackTrace();
+				System.out.println("Please run the program with this format: chat <port number>");
+			}
+			
+			
 	}
 
 	public void takeInput() throws Exception {
-		boolean exit = false;
+
 		Scanner keyboard;
 		String input;
 		String[] command;
@@ -86,9 +97,7 @@ public class chat {
 					send(command[1], command[2]);
 				break;
 			case "exit":
-				System.out.println(command.length);
 				if (command.length > 1) {
-
 					System.out.println("Too many arguments");
 				} else {
 					exit();
@@ -102,30 +111,9 @@ public class chat {
 		}
 	}
 
-	public void createSocket() throws IOException {
-		// Create an unbound server socket
-		ServerSocket serverSocket = new ServerSocket();
-
-		// Create a socket address object
-		InetSocketAddress endPoint = new InetSocketAddress("localhost", 12900);
-
-		// Set the wait queue size to 100
-		int waitQueueSize = 100;
-
-		// Bind the server socket to localhost and at port 12900 with
-		// a wait queue size of 100
-		serverSocket.bind(endPoint, waitQueueSize);
-	}
-
-	public void help() throws Exception {
-		System.out.println("help");
-
-	}
-
 	// print the ip address
 	public void myip() throws UnknownHostException, SocketException {
 		System.out.println("The IP address is " + Inet4Address.getLocalHost().getHostAddress());
-
 		// this is the fake ip will be commented
 		System.out.println("the fake " + NetworkInterface.getNetworkInterfaces().nextElement().getInetAddresses()
 				.nextElement().getHostAddress()); // returns "127.0.0.1"
@@ -135,14 +123,71 @@ public class chat {
 		System.out.println(portNumber);
 	}
 
-	public void connect(String dest, String port) {
-		/*
-		 * ServerSocketChannel serverSocket; serverSocket =
-		 * ServerSocketChannel.open(); serverSocket.socket().bind();
-		 * serverSocket.socket().accept();
-		 */
+	public void connect(String dest, String port) throws IOException {
+
+		ServerSocketChannel serverSocket;
+		serverSocket = ServerSocketChannel.open();
+		// serverSocket.socket().bind();
+		serverSocket.socket().accept();
 
 		System.out.println("connect");
+	}
+
+	public void client() throws UnknownHostException, IOException {
+		String sentece;
+		String mSentence;
+
+		// create input stream
+		BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
+
+		// create cllient socket connect to server
+		Socket clientSocket = new Socket(ipAddress, portNumber);
+
+		// create output stream attached to socket
+		DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
+
+		// create input stream
+		BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+
+		sentece = inFromUser.readLine();
+
+		// send line to server
+		outToServer.writeChars(sentece);
+
+		// read line from server
+		mSentence = inFromServer.readLine();
+
+		// client socket close
+		clientSocket.close();
+
+	}
+
+	public void server() throws UnknownHostException, IOException {
+		String clientSentece;
+		String modSentence;
+
+		ServerSocket serverSocket = new ServerSocket(portNumber);
+
+		while (true) {
+
+			// create cllient socket connect to server
+			Socket connectionSocket = new Socket(getIp(), portNumber);
+
+			// create input stream
+			BufferedReader inFromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
+
+			// create output stream attached to socket
+			DataOutputStream outToClient = new DataOutputStream(connectionSocket.getOutputStream());
+
+			clientSentece = inFromClient.readLine();
+
+			modSentence = clientSentece.toUpperCase() + '\n';
+
+			// send line to server
+			outToClient.writeChars(modSentence);
+
+		}
+
 	}
 
 	public void list() {
@@ -168,6 +213,55 @@ public class chat {
 
 	public int getPort() {
 		return this.portNumber;
+	}
+	
+	public String getIp() throws UnknownHostException{
+		return Inet4Address.getLocalHost().getHostAddress();
+	}
+
+	public void help() throws Exception {
+		System.out.println(
+				"|*******************************************HELP MENU*****************************************|");
+		System.out.println(
+				"| 1) help                                                                                     |");
+		System.out.println("|\t\tDescription: Display the command options and their description.               |");
+		System.out.println(
+				"|---------------------------------------------------------------------------------------------|");
+		System.out.println(
+				"| 2) myip                                                                                     |");
+		System.out.println("|\t\tDescription: Display the IP address.                                          |");
+		System.out.println(
+				"|---------------------------------------------------------------------------------------------|");
+		System.out.println(
+				"| 3) myport                                                                                   |");
+		System.out.println("|\t\tDescription: Display listening port.                                          |");
+		System.out.println(
+				"|---------------------------------------------------------------------------------------------|");
+		System.out.println(
+				"| 4) connect                                                                                  |");
+		System.out.println("|\t\tDescription: Establish connection with [destination IP] using [port number].  |");
+		System.out.println(
+				"|---------------------------------------------------------------------------------------------|");
+		System.out.println(
+				"| 5) list                                                                                     |");
+		System.out.println("|\t\tDescription: Display list of connections.                                     |");
+		System.out.println(
+				"|---------------------------------------------------------------------------------------------|");
+		System.out.println(
+				"| 6) terminate                                                                                |");
+		System.out.println("|\t\tDescription: End connection with IP address of [connection id].               |");
+		System.out.println(
+				"|---------------------------------------------------------------------------------------------|");
+		System.out.println(
+				"| 7) send                                                                                     |");
+		System.out.println("|\t\tDescription: Send [message] to IP address of [connection id].                 |");
+		System.out.println(
+				"|---------------------------------------------------------------------------------------------|");
+		System.out.println(
+				"| 8) exit                                                                                     |");
+		System.out.println("|\t\tDescription: Exit program.                                                    |");
+		System.out.println(
+				"|*********************************************************************************************|");
 	}
 
 	public void printErrorMsg(String msg) {

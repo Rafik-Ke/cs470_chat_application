@@ -2,9 +2,11 @@ package main;
 
 import java.io.*;
 import java.net.*;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.util.*;
 
-public class Test {
+public class Test2 {
 
 	private int portNumber = 50001;
 	private String ipAddress;
@@ -16,19 +18,9 @@ public class Test {
 	Socket socket;
 
 	public static void main(String[] args) throws Exception {
-
-		Test test = new Test();
-
+		Test2 test = new Test2();
 		test.serverRunner();
-
-		System.out.println(test.i);
-
 		test.takeInput();
-
-		System.out.println(test.i);
-
-		System.out.println(test.exit);
-
 	}
 
 	public void takeInput() throws Exception {
@@ -76,13 +68,22 @@ public class Test {
 
 	public void server() throws Exception {
 		// tcp socket
-		srvSocket = new ServerSocket(50001);
+	//	srvSocket = new ServerSocket(50001);
 		socket = null;
 		try {
 			while (!exit) {
 				boolean conExists = false;
-				socket = srvSocket.accept();
 				
+				ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+				serverSocketChannel.socket().bind(new InetSocketAddress(50001));
+				
+			    SocketChannel socketChannel = serverSocketChannel.accept();
+				
+	//			socket = srvSocket.accept();
+			    
+			    socketChannel.read
+				
+					
 				InputStreamReader instrReader = new InputStreamReader(socket.getInputStream());
 				BufferedReader br = new BufferedReader(instrReader);
 

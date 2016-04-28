@@ -109,11 +109,13 @@ public class chat {
 	}
 
 	// print the ip address
-	public void myip() throws UnknownHostException, SocketException {
-		System.out.println("The IP address is " + Inet4Address.getLocalHost().getHostAddress());
+	public String myip() throws UnknownHostException, SocketException {
+		String myIp =  Inet4Address.getLocalHost().getHostAddress();
+		System.out.println("The IP address is " + myIp);
 		// this is the fake ip will be commented
 		System.out.println("the fake " + NetworkInterface.getNetworkInterfaces().nextElement().getInetAddresses()
 				.nextElement().getHostAddress()); // returns "127.0.0.1"
+		return myIp;
 	}
 
 	public void myport() {

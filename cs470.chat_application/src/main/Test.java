@@ -1,16 +1,8 @@
 package main;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.io.*;
+import java.net.*;
+import java.util.*;
 
 public class Test {
 
@@ -51,19 +43,14 @@ public class Test {
 			input = input.toLowerCase().trim();
 			command = input.split("\\s+");
 			switch (command[0]) {
-			
 			case "connect":
-				client();
+				connect(command[1], command[2]);
 				break;
-
 			case "exit":
 				exit = true;
 				// socket.close();
 				srvSocket.close();
 				break;
-				
-				
-
 			}
 		}
 	}
@@ -80,7 +67,7 @@ public class Test {
 		};
 		t.start();
 	}
-	
+
 	public void server() throws Exception {
 		// tcp socket
 		srvSocket = new ServerSocket(50001);
@@ -89,17 +76,16 @@ public class Test {
 			while (!exit) {
 				socket = srvSocket.accept();
 				socketList.add(socket);
-				
-				System.out.println("New connection from: " + socket.getRemoteSocketAddress());
 
 				InputStreamReader instrReader = new InputStreamReader(socket.getInputStream());
 				BufferedReader br = new BufferedReader(instrReader);
 
 				String msg = br.readLine();
-				System.out.println(msg + " printed in server");
-				if (msg != null) {
+
+				if (msg != null && msg.equals("client")) {
+					System.out.println("New connection from: " + socket.getRemoteSocketAddress());
 					PrintStream prntStream = new PrintStream(socket.getOutputStream());
-					prntStream.println("msg reseived");
+					prntStream.println("server");
 				}
 			}
 		} catch (Exception e) {
@@ -110,24 +96,44 @@ public class Test {
 		}
 	}
 	
-	@SuppressWarnings("resource")
-	public void client() throws Exception {
-		Socket socket  = null;
-		OutputStream os;
-		PrintWriter pw;
-		socket = new Socket("192.168.1.67", 50001);
-		
-		PrintStream ps = new PrintStream(socket.getOutputStream());
-		ps.println("hello to server from client , message : " + ++i);
-		
-		
-		InputStreamReader instrReader = new InputStreamReader(socket.getInputStream());
-		BufferedReader br = new BufferedReader(instrReader);
-
-		String msg = br.readLine();
-		System.out.println(msg);
+	public void send(String conId, String msg) {
+		System.out.println("send");
 	}
 
+	public void connect(String ip, String port) throws Exception {
+		Socket socket = null;
+		PrintStream ps = null;
+		int timeout = 200;
+		try {
+			
+			int p = Integer.parseInt(port);
+	//		socket = new Socket(ip, p );
+			
+			socket = new Socket();
 
+			// limiting the time to establish a connection
+			socket.connect(new InetSocketAddress(ip, Integer.parseInt(port)), timeout);
 
+			// stop the request after connection succeeds
+			socket.setSoTimeout(timeout);
+
+			ps = new PrintStream(socket.getOutputStream());
+
+			// manual connection verification
+			ps.println("client");
+
+			InputStreamReader isr = new InputStreamReader(socket.getInputStream());
+			BufferedReader br = new BufferedReader(isr);
+
+			String msg = br.readLine();
+			if (msg != null && msg.equals("server"))
+				System.out.println("The connection to peer " + ip + " is successfully established;");
+		} catch (Exception e) {
+			 e.printStackTrace();
+			System.out.println("something wrong");
+		} finally {
+			if (socket != null && !socket.isClosed())
+				socket.close();
+		}
+	}
 }

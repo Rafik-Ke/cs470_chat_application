@@ -130,62 +130,6 @@ public class chat {
 		System.out.println("connect");
 	}
 
-	public void client() throws UnknownHostException, IOException {
-		String sentece;
-		String mSentence;
-
-		// create input stream
-		BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
-
-		// create cllient socket connect to server
-		Socket clientSocket = new Socket(ipAddress, portNumber);
-
-		// create output stream attached to socket
-		DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
-
-		// create input stream
-		BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-
-		sentece = inFromUser.readLine();
-
-		// send line to server
-		outToServer.writeChars(sentece);
-
-		// read line from server
-		mSentence = inFromServer.readLine();
-
-		// client socket close
-		clientSocket.close();
-
-	}
-
-	public void server() throws UnknownHostException, IOException {
-		String clientSentece;
-		String modSentence;
-
-		ServerSocket serverSocket = new ServerSocket(portNumber);
-
-		while (true) {
-
-			// create cllient socket connect to server
-			Socket connectionSocket = new Socket(getIp(), portNumber);
-
-			// create input stream
-			BufferedReader inFromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
-
-			// create output stream attached to socket
-			DataOutputStream outToClient = new DataOutputStream(connectionSocket.getOutputStream());
-
-			clientSentece = inFromClient.readLine();
-
-			modSentence = clientSentece.toUpperCase() + '\n';
-
-			// send line to server
-			outToClient.writeChars(modSentence);
-
-		}
-
-	}
 
 	public void list() {
 		System.out.println("list");

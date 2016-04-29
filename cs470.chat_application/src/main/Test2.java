@@ -16,39 +16,15 @@ public class Test2 {
 	private volatile boolean exit = false;
 	int i = 0;
 	public List<SocketChannel> socketChannelList = new ArrayList<SocketChannel>();
-	public List<String> portList = new ArrayList<String>();
+	public List<String> ipList = new ArrayList<String>();
+	public List<Integer> portList = new ArrayList<Integer>();
 	ServerSocket srvSocket;
 	Socket socket;
-	  public static final String GREETING = "Hello I must be going.\r\n";
+
 	public static void main(String[] args) throws Exception {
-
-		
-		int port = 40001; // default
-	    ByteBuffer buffer = ByteBuffer.wrap(GREETING.getBytes());
-	    ServerSocketChannel ssc = ServerSocketChannel.open();
-	    ssc.socket().bind(new InetSocketAddress(port));
-	    ssc.configureBlocking(false);
-	    while (true) {
-	      System.out.println("Waiting for connections");
-	      SocketChannel sc = ssc.accept();
-	      if (sc == null) {
-	        Thread.sleep(2000);
-	      } else {
-	        System.out.println("Incoming connection from: " + sc.socket().getRemoteSocketAddress());
-	        buffer.rewind();
-	        sc.write(buffer);
-	        sc.close();
-	      }
-	    }
-
-		
-		
-		
-/*		Test2 test = new Test2();
-		// test.serverRunner();
-		test.newS();
-		test.takeInput();*/
-
+		Test2 test = new Test2(); //
+		test.serverRunner();// test.newS();
+		test.takeInput();
 	}
 
 	public void takeInput() throws Exception {
@@ -64,7 +40,9 @@ public class Test2 {
 			command = input.split("\\s+");
 			switch (command[0]) {
 			case "connect":
-				connect(command[1], command[2]);
+				// connect(command[1], command[2]);
+				connect("192.168.1.67", "40001");
+				connect("localhost", "40001");
 				break;
 			case "exit":
 				exit = true;
@@ -77,6 +55,9 @@ public class Test2 {
 			case "send":
 				send(command[1], command[2]);
 				break;
+			case "myip":
+				myip();
+				break;
 			}
 		}
 	}
@@ -86,6 +67,8 @@ public class Test2 {
 			public void run() {
 				try {
 					server();
+					// newS();
+
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -95,12 +78,13 @@ public class Test2 {
 	}
 
 	public void newS() throws IOException {
-		while (true) {
-			ServerSocketChannel ssChannel = ServerSocketChannel.open();
-			ssChannel.configureBlocking(false);
-			int port = 40001;
-			ssChannel.socket().bind(new InetSocketAddress(port));
-			int localPort = ssChannel.socket().getLocalPort();
+
+		ServerSocketChannel ssChannel = ServerSocketChannel.open();
+		ssChannel.configureBlocking(false);
+		int port = 40001;
+		ssChannel.socket().bind(new InetSocketAddress(port));
+		int localPort = ssChannel.socket().getLocalPort();
+		while (!exit) {
 			SocketChannel sChannel = ssChannel.accept();
 			if (sChannel == null) {
 			} else {
@@ -111,31 +95,42 @@ public class Test2 {
 	public void server() throws Exception {
 		ServerSocketChannel serverSocketChannel = null;
 		SocketChannel socketChannel = null;
+		boolean conExists;
 		try {
-			// while (!exit) {
-			boolean conExists = false;
 			serverSocketChannel = ServerSocketChannel.open();
 			serverSocketChannel.configureBlocking(false);
 			serverSocketChannel.socket().bind(new InetSocketAddress(40001));
-			// this is handshake with client
-			socketChannel = serverSocketChannel.accept();
+			while (!exit) {
+				conExists = false;
+				// this is handshake with client
+				socketChannel = serverSocketChannel.accept();
 
-			for (SocketChannel i : socketChannelList)
-				if (i.getRemoteAddress().equals(socketChannel.getRemoteAddress())) {
-					System.out.println("The connection exists");
-					conExists = true;
+				if (socketChannel != null) {
+					// these removes extras
+					String localAddress = socketChannel.getLocalAddress().toString().split(":")[0];
+					localAddress = localAddress.replaceAll("[/:]", "");
+					String remoteAddress = socketChannel.getRemoteAddress().toString().split(":")[0];
+					remoteAddress = remoteAddress.replaceAll("[/:]", "");
+
+					if (myip().equals(remoteAddress) || localAddress.equals(remoteAddress)) {
+						System.out.println("The connection request is from the same computer");
+						conExists = true;
+					} else {
+						for (int i = 0; i < socketChannelList.size(); i++) {
+							if (ipList.get(i).equals(remoteAddress)) {
+								System.out.println("The connection already exists");
+								conExists = true;
+							}
+						}
+					}
+
+					if (!conExists) {
+						socketChannelList.add(socketChannel);
+						ipList.add(remoteAddress);
+						portList.add(myPortNumber);
+					}
 				}
-
-			if (socketChannel != null)
-				if (myip().equals(socketChannel.getRemoteAddress())) {
-					conExists = true;
-					System.out.println("The connection from the same computer");
-				}
-
-			if (!conExists)
-				socketChannelList.add(socketChannel);
-
-			// }
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
@@ -159,9 +154,12 @@ public class Test2 {
 		String myIp = Inet4Address.getLocalHost().getHostAddress();
 		System.out.println("The IP address is " + myIp);
 		// this is the fake ip will be commented
-		System.out.println("the fake " + NetworkInterface.getNetworkInterfaces().nextElement().getInetAddresses()
-				.nextElement().getHostAddress()); // returns "127.0.0.1"
-		return myIp;
+		/*
+		 * System.out.println("the fake " +
+		 * NetworkInterface.getNetworkInterfaces().nextElement().
+		 * getInetAddresses() .nextElement().getHostAddress()); // returns
+		 * "127.0.0.1"
+		 */ return myIp;
 	}
 
 	public void list() throws IOException {
@@ -169,42 +167,32 @@ public class Test2 {
 			System.out.println((i + 1) + " " + socketChannelList.get(i).getRemoteAddress() + " " + portList.get(i));
 	}
 
-	public void connect(String ip, String port) throws Exception {
+	public void connect(String destIp, String p) throws Exception {
 		SocketChannel socketChannel = null;
 		PrintStream ps = null;
 		int timeout = 200;
+		boolean conExists = false;
 		try {
-			// int p = Integer.parseInt(port);
-			// socket = new Socket(ip, p );
-
+			int port = Integer.parseInt(p);
 			socketChannel = SocketChannel.open();
 
+			if (destIp.equals(myip()) || destIp.toLowerCase().equals("localhost") || destIp.equals("127.0.0.1")) {
+				System.out.println("The connection request is from the same computer");
+				conExists = true;
+			} else {
+				for (int i = 0; i < socketChannelList.size(); i++) {
+					if (destIp.equals(ipList.get(i))) {
+						System.out.println("The connection already exists");
+						conExists = true;
+					}
+				}
+			}
+
 			// limiting the time to establish a connection
-			socketChannel.connect(new InetSocketAddress(ip, Integer.parseInt(port)));
+			if (!conExists)
+				socketChannel.connect(new InetSocketAddress(destIp, port));
 
-			if (socketChannel.isConnected())
-				socketChannelList.add(socketChannel);
 
-			// stop the request after connection succeeds
-			// socket.setSoTimeout(timeout);
-			/*
-			 * ByteBuffer buf = ByteBuffer.allocate(48);
-			 * 
-			 * int bytesRead = socketChannel.read(buf);
-			 * 
-			 * ps = new PrintStream(socketChannel.getOutputStream());
-			 * 
-			 * // manual connection verification ps.println("client");
-			 * 
-			 * InputStreamReader isr = new
-			 * InputStreamReader(socket.getInputStream()); BufferedReader br =
-			 * new BufferedReader(isr);
-			 * 
-			 * String msg = br.readLine(); if (msg != null &&
-			 * msg.equals("server")) { System.out.println(
-			 * "The connection to peer " + ip + " is successfully established;"
-			 * ); socketChannelList.add(socket); portList.add(port); }
-			 */
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.out.println("something wrong");

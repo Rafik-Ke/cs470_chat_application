@@ -2,17 +2,18 @@ package main;
 
 import java.io.*;
 import java.net.*;
+import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.*;
 
 public class Test2 {
 
-	private int portNumber = 50001;
+	private int myPortNumber = 50002;
 	private String ipAddress;
 	private volatile boolean exit = false;
 	int i = 0;
-	public List<Socket> socketList = new ArrayList<Socket>();
+	public List<SocketChannel> socketChannelList = new ArrayList<SocketChannel>();
 	public List<String> portList = new ArrayList<String>();
 	ServerSocket srvSocket;
 	Socket socket;
@@ -67,60 +68,49 @@ public class Test2 {
 	}
 
 	public void server() throws Exception {
-		// tcp socket
-	//	srvSocket = new ServerSocket(50001);
-		socket = null;
+		ServerSocketChannel serverSocketChannel = null;
+		SocketChannel socketChannel = null;
 		try {
 			while (!exit) {
 				boolean conExists = false;
-				
-				ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
-				serverSocketChannel.socket().bind(new InetSocketAddress(50001));
-				
-			    SocketChannel socketChannel = serverSocketChannel.accept();
-				
-	//			socket = srvSocket.accept();
-			    
-			    socketChannel.read
-				
-					
-				InputStreamReader instrReader = new InputStreamReader(socket.getInputStream());
-				BufferedReader br = new BufferedReader(instrReader);
+				serverSocketChannel = ServerSocketChannel.open();
+				serverSocketChannel.configureBlocking(false);
+				serverSocketChannel.socket().bind(new InetSocketAddress(4000));
+				// this is handshake with client
+				socketChannel = serverSocketChannel.accept();
 
-				String msg = br.readLine();
-
-				for (Socket i : socketList)
-					if (i.getRemoteSocketAddress().equals(socket.getRemoteSocketAddress())) {
+				for (SocketChannel i : socketChannelList)
+					if (i.getRemoteAddress().equals(socketChannel.getRemoteAddress())) {
 						System.out.println("The connection exists");
 						conExists = true;
 					}
-				if (myip().equals(socket.getRemoteSocketAddress())){
-					conExists = true;
-					System.out.println("The connection from the same computer");
-				}
-				if (msg != null && msg.equals("client") && !conExists) {
-					socketList.add(socket);
-					portList.add("" + 50001);
-					System.out.println("New connection from: " + socket.getRemoteSocketAddress());
-					PrintStream printStream = new PrintStream(socket.getOutputStream());
-					printStream.println("server");
-				}
+				
+				if (socketChannel != null)
+					if (myip().equals(socketChannel.getRemoteAddress())) {
+						conExists = true;
+						System.out.println("The connection from the same computer");
+					}
+
+				if (!conExists)
+					socketChannelList.add(socketChannel);
+
 			}
 		} catch (Exception e) {
-
+			e.printStackTrace();
 		} finally {
-			if (socket != null && !socket.isClosed())
-				socket.close();
+			// if (socketChannel != null && !socketChannel.isClosed())
+			socketChannel.close();
 		}
 	}
-	
+
 	public void send(String conId, String msg) throws IOException {
 		System.out.println("send");
-		
+
 		int id = Integer.parseInt(conId);
-		PrintStream printStream = new PrintStream(socketList.get(id).getOutputStream());
-		printStream.println(msg);
-		
+		// PrintStream printStream = new
+		// PrintStream(socketChannelList.get(id).getOutputStream());
+		// printStream.println(msg);
+
 	}
 
 	// print the ip address
@@ -133,41 +123,47 @@ public class Test2 {
 		return myIp;
 	}
 
-	public void list() {
-		for (int i = 0; i < socketList.size(); i++)
-			System.out.println((i + 1) + " " + socketList.get(i).getInetAddress() + " " + portList.get(i));
+	public void list() throws IOException {
+		for (int i = 0; i < socketChannelList.size(); i++)
+			System.out.println((i + 1) + " " + socketChannelList.get(i).getRemoteAddress() + " " + portList.get(i));
 	}
 
 	public void connect(String ip, String port) throws Exception {
-		Socket socket = null;
+		SocketChannel socketChannel = null;
 		PrintStream ps = null;
 		int timeout = 200;
 		try {
 			// int p = Integer.parseInt(port);
 			// socket = new Socket(ip, p );
 
-			socket = new Socket();
+			socketChannel = SocketChannel.open();
 
 			// limiting the time to establish a connection
-			socket.connect(new InetSocketAddress(ip, Integer.parseInt(port)), timeout);
+			socketChannel.connect(new InetSocketAddress(ip, Integer.parseInt(port)));
+
+			if (socketChannel.isConnected())
+				socketChannelList.add(socketChannel);
 
 			// stop the request after connection succeeds
-			socket.setSoTimeout(timeout);
-
-			ps = new PrintStream(socket.getOutputStream());
-
-			// manual connection verification
-			ps.println("client");
-
-			InputStreamReader isr = new InputStreamReader(socket.getInputStream());
-			BufferedReader br = new BufferedReader(isr);
-
-			String msg = br.readLine();
-			if (msg != null && msg.equals("server")) {
-				System.out.println("The connection to peer " + ip + " is successfully established;");
-				socketList.add(socket);
-				portList.add(port);
-			}
+			// socket.setSoTimeout(timeout);
+			/*
+			 * ByteBuffer buf = ByteBuffer.allocate(48);
+			 * 
+			 * int bytesRead = socketChannel.read(buf);
+			 * 
+			 * ps = new PrintStream(socketChannel.getOutputStream());
+			 * 
+			 * // manual connection verification ps.println("client");
+			 * 
+			 * InputStreamReader isr = new
+			 * InputStreamReader(socket.getInputStream()); BufferedReader br =
+			 * new BufferedReader(isr);
+			 * 
+			 * String msg = br.readLine(); if (msg != null &&
+			 * msg.equals("server")) { System.out.println(
+			 * "The connection to peer " + ip + " is successfully established;"
+			 * ); socketChannelList.add(socket); portList.add(port); }
+			 */
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.out.println("something wrong");

@@ -140,7 +140,7 @@ public class Test {
 	public void connect(String ip, String port) throws Exception {
 		Socket socket = null;
 		PrintStream ps = null;
-		int timeout = 200;
+		int timeout = 2000;
 		try {
 			// int p = Integer.parseInt(port);
 			// socket = new Socket(ip, p );
@@ -148,10 +148,10 @@ public class Test {
 			socket = new Socket();
 
 			// limiting the time to establish a connection
-			socket.connect(new InetSocketAddress(ip, Integer.parseInt(port)), timeout);
+			socket.connect(new InetSocketAddress(ip, Integer.parseInt(port)));
 
 			// stop the request after connection succeeds
-			socket.setSoTimeout(timeout);
+		//	socket.setSoTimeout(timeout);
 
 			ps = new PrintStream(socket.getOutputStream());
 

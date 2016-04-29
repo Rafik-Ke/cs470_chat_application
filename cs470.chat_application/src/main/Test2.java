@@ -3,6 +3,8 @@ package main;
 import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.*;
@@ -17,11 +19,36 @@ public class Test2 {
 	public List<String> portList = new ArrayList<String>();
 	ServerSocket srvSocket;
 	Socket socket;
-
+	  public static final String GREETING = "Hello I must be going.\r\n";
 	public static void main(String[] args) throws Exception {
-		Test2 test = new Test2();
-		test.serverRunner();
-		test.takeInput();
+
+		
+		int port = 40001; // default
+	    ByteBuffer buffer = ByteBuffer.wrap(GREETING.getBytes());
+	    ServerSocketChannel ssc = ServerSocketChannel.open();
+	    ssc.socket().bind(new InetSocketAddress(port));
+	    ssc.configureBlocking(false);
+	    while (true) {
+	      System.out.println("Waiting for connections");
+	      SocketChannel sc = ssc.accept();
+	      if (sc == null) {
+	        Thread.sleep(2000);
+	      } else {
+	        System.out.println("Incoming connection from: " + sc.socket().getRemoteSocketAddress());
+	        buffer.rewind();
+	        sc.write(buffer);
+	        sc.close();
+	      }
+	    }
+
+		
+		
+		
+/*		Test2 test = new Test2();
+		// test.serverRunner();
+		test.newS();
+		test.takeInput();*/
+
 	}
 
 	public void takeInput() throws Exception {
@@ -67,39 +94,53 @@ public class Test2 {
 		t.start();
 	}
 
+	public void newS() throws IOException {
+		while (true) {
+			ServerSocketChannel ssChannel = ServerSocketChannel.open();
+			ssChannel.configureBlocking(false);
+			int port = 40001;
+			ssChannel.socket().bind(new InetSocketAddress(port));
+			int localPort = ssChannel.socket().getLocalPort();
+			SocketChannel sChannel = ssChannel.accept();
+			if (sChannel == null) {
+			} else {
+			}
+		}
+	}
+
 	public void server() throws Exception {
 		ServerSocketChannel serverSocketChannel = null;
 		SocketChannel socketChannel = null;
 		try {
-			while (!exit) {
-				boolean conExists = false;
-				serverSocketChannel = ServerSocketChannel.open();
-				serverSocketChannel.configureBlocking(false);
-				serverSocketChannel.socket().bind(new InetSocketAddress(4000));
-				// this is handshake with client
-				socketChannel = serverSocketChannel.accept();
+			// while (!exit) {
+			boolean conExists = false;
+			serverSocketChannel = ServerSocketChannel.open();
+			serverSocketChannel.configureBlocking(false);
+			serverSocketChannel.socket().bind(new InetSocketAddress(40001));
+			// this is handshake with client
+			socketChannel = serverSocketChannel.accept();
 
-				for (SocketChannel i : socketChannelList)
-					if (i.getRemoteAddress().equals(socketChannel.getRemoteAddress())) {
-						System.out.println("The connection exists");
-						conExists = true;
-					}
-				
-				if (socketChannel != null)
-					if (myip().equals(socketChannel.getRemoteAddress())) {
-						conExists = true;
-						System.out.println("The connection from the same computer");
-					}
+			for (SocketChannel i : socketChannelList)
+				if (i.getRemoteAddress().equals(socketChannel.getRemoteAddress())) {
+					System.out.println("The connection exists");
+					conExists = true;
+				}
 
-				if (!conExists)
-					socketChannelList.add(socketChannel);
+			if (socketChannel != null)
+				if (myip().equals(socketChannel.getRemoteAddress())) {
+					conExists = true;
+					System.out.println("The connection from the same computer");
+				}
 
-			}
+			if (!conExists)
+				socketChannelList.add(socketChannel);
+
+			// }
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
 			// if (socketChannel != null && !socketChannel.isClosed())
-			socketChannel.close();
+			// socketChannel.close();
 		}
 	}
 

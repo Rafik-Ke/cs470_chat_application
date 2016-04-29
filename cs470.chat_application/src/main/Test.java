@@ -20,14 +20,8 @@ public class Test {
 		Test test = new Test();
 
 		test.serverRunner();
-
-		System.out.println(test.i);
-
 		test.takeInput();
 
-		System.out.println(test.i);
-
-		System.out.println(test.exit);
 
 	}
 

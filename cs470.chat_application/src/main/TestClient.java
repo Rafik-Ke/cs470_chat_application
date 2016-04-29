@@ -1,30 +1,28 @@
 package main;
 
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
+import java.io.*;
+import java.net.*;
 
-public class TestClient implements Hello{
-    private TestClient() {}
-    public static void main(String[] args) {
-        String host = (args.length < 1) ? null : args[0];
-        try {
+public class TestClient {
+	int i = 0;
 
-            Registry registry = LocateRegistry.getRegistry(host);
-            Hello stub = (Hello) registry.lookup("Hello");
+	public static void main(String[] args) throws Exception {
 
-            String response = stub.sayHello();
-           // String response2 = stub.display();
+		TestClient ca = new TestClient();
+		while (true)
+			ca.client();
+	}
 
-            System.out.println("response: " + response);
-            //System.out.println("response2: " + response2);
+	@SuppressWarnings("resource")
+	public void client() throws Exception {
+		Socket socket = new Socket("192.168.1.143", 50001);
+		PrintStream ps = new PrintStream(socket.getOutputStream());
+		ps.println("hello to server from client , message : " + ++i);
 
+		InputStreamReader instrReader = new InputStreamReader(socket.getInputStream());
+		BufferedReader br = new BufferedReader(instrReader);
 
-        } catch (Exception e) {
-            System.err.println("Client exception: " + e.toString());
-            e.printStackTrace();
-        }
-    }
-    public String sayHello() {
-        return "Hello!";
-    }
+		String msg = br.readLine();
+		System.out.println(msg);
+	}
 }

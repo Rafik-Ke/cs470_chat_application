@@ -140,7 +140,7 @@ public class Test {
 	public void connect(String ip, String port) throws Exception {
 		Socket socket = null;
 		PrintStream ps = null;
-		int timeout = 200;
+		int timeout = 20000;
 		try {
 			// int p = Integer.parseInt(port);
 			// socket = new Socket(ip, p );

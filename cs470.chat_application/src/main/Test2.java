@@ -3,15 +3,12 @@ package main;
 import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.*;
 
 
-http://rox-xmlrpc.sourceforge.net/niotut/#The server
+//http://rox-xmlrpc.sourceforge.net/niotut/#The server
 
 
 
@@ -77,8 +74,10 @@ public class Test2 {
 							continue;
 						}
 						// Check what event is available and deal with it
+						//new connection request
 						if (key.isAcceptable()) {
 							this.accept(key);
+							//connection already exists
 						} else if (key.isReadable()) {
 							this.read(key);
 						}
@@ -142,17 +141,9 @@ public class Test2 {
 	  }
 	
 	
-	
-	
-	
-	
-	
-	
-	
-	
-
 	public void connect(String destIp, String p) throws Exception {
 		SocketChannel socketChannel = null;
+		InetSocketAddress isa = null;
 		PrintStream ps = null;
 		int timeout = 1000;
 		boolean conExists = false;
@@ -171,8 +162,14 @@ public class Test2 {
 			 */
 			// socketChannel.socket().setSoTimeout(timeout);
 			// limiting the time to establish a connection
-			if (!conExists)
-				socketChannel.socket().connect(new InetSocketAddress(destIp, port), timeout);
+			isa = new InetSocketAddress(destIp, port);
+			
+		
+			socketChannel.connect(isa);
+			socketChannel.configureBlocking(false);
+			socketChannelList.add(socketChannel);
+		//	if (!conExists)
+			//	socketChannel.socket().connect(new InetSocketAddress(destIp, port), timeout);
 
 			byte[] message = new String("client").getBytes();
 			ByteBuffer buffer = ByteBuffer.wrap(message);
@@ -234,7 +231,7 @@ public class Test2 {
 			switch (command[0]) {
 			case "connect":
 				// connect(command[1], command[2]);
-				connect("192.168.1.67", "40001");
+		//		connect("192.168.1.67", "40001");
 				connect("localhost", "40001");
 				connect("127.0.0.1", "40001");
 				break;

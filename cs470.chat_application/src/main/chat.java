@@ -2,37 +2,242 @@ package main;
 
 import java.io.*;
 import java.net.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
-import java.util.Enumeration;
-import java.util.Scanner;
+import java.nio.channels.SocketChannel;
+import java.nio.channels.spi.SelectorProvider;
+import java.util.*;
 
 public class chat {
-	private int portNumber = 50001;
-	private String ipAddress;
+	private int myPortNumber = 50001;
+	private String myIp;
 	private boolean exit = false;
+	List<SocketChannel> socketChannelList = new ArrayList<SocketChannel>();
+	List<String> ipList = new ArrayList<String>();
+	List<Integer> portList = new ArrayList<Integer>();
+	Selector socketSelector;
+	ServerSocketChannel serverSocketChannel;
+	SocketChannel socketChannel;
+	private ByteBuffer readBuffer = ByteBuffer.allocate(9000);
 
 	public static void main(String[] args) throws Exception {
-
-
-		// socket.getRemoteSocketAddress().toString();
-
 			chat chatApp = new chat();
 			try {
-		//		chatApp.portNumber = Integer.parseInt(args[0]);
+			//	chatApp.setMyPortNumber(Integer.parseInt(args[0]));
 				chatApp.takeInput();
-/*				chatApp.server();
-				chatApp.client();*/
+				chatApp.serverRunner();
 				
 			} catch (Exception e) {
 				e.printStackTrace();
 				System.out.println("Please run the program with this format: chat <port number>");
 			}
-			
-			
 	}
 
-	public void takeInput() throws Exception {
+	public void serverRunner() throws IOException {
+		socketSelector = SelectorProvider.provider().openSelector();
+		serverSocketChannel = ServerSocketChannel.open();
+		serverSocketChannel.configureBlocking(false);
+		serverSocketChannel.register(socketSelector, SelectionKey.OP_ACCEPT);
+		serverSocketChannel.socket().bind(new InetSocketAddress(myPortNumber));
+	
+		Thread t = new Thread() {
+			public void run() {
+				try {
+					server();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		};
+		t.start();
+	}
+	
+	public void server() throws Exception {
+	//	boolean conExists; //no need because client will not send connect
+		try {
+			while (!exit) {
+		//		conExists = false;
+				try {
+					// Wait for an event one of the registered channels
+					socketSelector.select();
 
+					// Iterate over the set of keys for which events are
+					// available
+					Iterator<SelectionKey> selectedKeys = socketSelector.selectedKeys().iterator();
+					while (selectedKeys.hasNext()) {
+						SelectionKey key = (SelectionKey) selectedKeys.next();
+						selectedKeys.remove();
+						if (!key.isValid()) {
+							continue;
+						}
+						// Check what event is available and deal with it
+						//new connection request
+						if (key.isAcceptable()) {
+							this.accept(key);
+							//connection already exists
+						} else if (key.isReadable()) {
+							this.read(key);
+						}
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		} catch (Exception e) {
+		}
+	}
+	private void accept(SelectionKey key) throws IOException {
+		// For an accept to be pending the channel must be a server socket
+		// channel.
+		ServerSocketChannel serverSocketChannel = (ServerSocketChannel) key.channel();
+
+		// Accept the connection and make it non-blocking
+		SocketChannel socketChannel = serverSocketChannel.accept();
+		Socket socket = socketChannel.socket();
+		socketChannel.configureBlocking(false);
+
+		// Register the new SocketChannel with our Selector, indicating
+		// we'd like to be notified when there's data waiting to be read
+		socketChannel.register(socketSelector, SelectionKey.OP_READ);
+	}
+	
+	private void read(SelectionKey key) throws IOException {
+	    SocketChannel socketChannel = (SocketChannel) key.channel();
+
+	    // Clear out our read buffer so it's ready for new data
+	    readBuffer.clear();
+	    
+	    // Attempt to read off the channel
+	    int numRead;
+	    try {
+	      numRead = socketChannel.read(readBuffer);
+	    } catch (IOException e) {
+	      // The remote forcibly closed the connection, cancel
+	      // the selection key and close the channel.
+	      key.cancel();
+	      socketChannel.close();
+	      return;
+	    }
+
+	    if (numRead == -1) {
+	      // Remote entity shut the socket down cleanly. Do the
+	      // same from our end and cancel the channel.
+	      key.channel().close();
+	      key.cancel();
+	      return;
+	    }
+	    
+	    byte[] data = new byte[numRead];
+		System.arraycopy(readBuffer.array(), 0, data, 0, numRead);
+		
+		System.out.println(new String(data));
+
+	    // Hand the data off to our worker thread
+	//    this.worker.processData(this, socketChannel, this.readBuffer.array(), numRead); 
+	  }
+	
+	// print the ip address
+	public String myip() throws UnknownHostException, SocketException {
+		String myIp =  Inet4Address.getLocalHost().getHostAddress();
+		System.out.println("The IP address is " + myIp);
+		// this is the fake ip will be commented
+		System.out.println("the fake " + NetworkInterface.getNetworkInterfaces().nextElement().getInetAddresses()
+				.nextElement().getHostAddress()); // returns "127.0.0.1"
+		return myIp;
+	}
+
+	public void connect(String destIp, String p) throws Exception {
+		SocketChannel socketChannel = null;
+		InetSocketAddress isa = null;
+		PrintStream ps = null;
+		int timeout = 1000;
+		boolean conExists = false;
+		try {
+			int port = Integer.parseInt(p);
+			socketChannel = SocketChannel.open();
+
+			/*
+			 * if (destIp.equals(myip()) ||
+			 * destIp.toLowerCase().equals("localhost") ||
+			 * destIp.equals("127.0.0.1")) { System.out.println(
+			 * "The connection request is from the same computer"); conExists =
+			 * true; } else { for (int i = 0; i < socketChannelList.size(); i++)
+			 * { if (destIp.equals(ipList.get(i))) { System.out.println(
+			 * "The connection already exists"); conExists = true; } } }
+			 */
+			// socketChannel.socket().setSoTimeout(timeout);
+			// limiting the time to establish a connection
+			isa = new InetSocketAddress(destIp, port);
+			
+		
+			socketChannel.connect(isa);
+			socketChannel.configureBlocking(false);
+			socketChannelList.add(socketChannel);
+		//	if (!conExists)
+			//	socketChannel.socket().connect(new InetSocketAddress(destIp, port), timeout);
+
+			byte[] message = new String("client").getBytes();
+			ByteBuffer buffer = ByteBuffer.wrap(message);
+			socketChannel.write(buffer);
+			buffer.clear();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.out.println("something wrong");
+		} finally {
+
+		}
+	}
+	
+	public void send(String conId, String msg) throws IOException {
+
+		int id = Integer.parseInt(conId);
+
+		byte[] message = new String(msg).getBytes();
+		ByteBuffer buffer = ByteBuffer.wrap(message);
+
+		socketChannelList.get(id).write(buffer);
+
+		System.out.println(socketChannelList.get(id).isConnected());
+
+		buffer.clear();
+
+	}
+
+
+	public void list() {
+		System.out.println("list");
+	}
+
+	public void terminate(String conId) {
+		System.out.println("terminate");
+	}
+
+	public void exit() {
+		// close the connection
+	//	srvSocket.close();
+		System.out.println("exit");
+	}
+
+	public void setMyPortNumber(int port) {
+		this.myPortNumber = port;
+	}
+
+	public int getMyPortNumber() {
+		return this.myPortNumber;
+	}
+	
+	public String getMyIp() throws UnknownHostException{
+		return this.myIp;
+	}
+	
+	public void setMyIp() throws UnknownHostException{
+		this.myIp = Inet4Address.getLocalHost().getHostAddress();
+	}
+	
+	public void takeInput() throws Exception {
 		Scanner keyboard;
 		String input;
 		String[] command;
@@ -59,7 +264,7 @@ public class chat {
 				if (command.length > 1)
 					System.out.println("Too many arguments");
 				else
-					myport();
+					getMyPortNumber();
 				break;
 			case "connect":
 				if (command.length == 1)
@@ -106,61 +311,6 @@ public class chat {
 				break;
 			}
 		}
-	}
-
-	// print the ip address
-	public String myip() throws UnknownHostException, SocketException {
-		String myIp =  Inet4Address.getLocalHost().getHostAddress();
-		System.out.println("The IP address is " + myIp);
-		// this is the fake ip will be commented
-		System.out.println("the fake " + NetworkInterface.getNetworkInterfaces().nextElement().getInetAddresses()
-				.nextElement().getHostAddress()); // returns "127.0.0.1"
-		return myIp;
-	}
-
-	public void myport() {
-		System.out.println(portNumber);
-	}
-
-	public void connect(String dest, String port) throws IOException {
-
-		ServerSocketChannel serverSocket;
-		serverSocket = ServerSocketChannel.open();
-		// serverSocket.socket().bind();
-		serverSocket.socket().accept();
-
-		System.out.println("connect");
-	}
-
-
-	public void list() {
-		System.out.println("list");
-	}
-
-	public void terminate(String conId) {
-		System.out.println("terminate");
-	}
-
-	public void send(String conId, String msg) {
-		System.out.println("send");
-	}
-
-	public void exit() {
-		// close the connection
-	//	srvSocket.close();
-		System.out.println("exit");
-	}
-
-	public void setPort(int port) {
-		this.portNumber = port;
-	}
-
-	public int getPort() {
-		return this.portNumber;
-	}
-	
-	public String getIp() throws UnknownHostException{
-		return Inet4Address.getLocalHost().getHostAddress();
 	}
 
 	public void help() throws Exception {

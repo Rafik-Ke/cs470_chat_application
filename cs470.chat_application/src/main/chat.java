@@ -151,7 +151,7 @@ public class chat {
 		SocketChannel socketChannel = null;
 		InetSocketAddress isa = null;
 		PrintStream ps = null;
-		int timeout = 1000;
+		int timeout = 10000;
 		boolean conExists = false;
 		try {
 			int port = Integer.parseInt(p);
@@ -166,12 +166,12 @@ public class chat {
 			 * { if (destIp.equals(ipList.get(i))) { System.out.println(
 			 * "The connection already exists"); conExists = true; } } }
 			 */
-			 socketChannel.socket().setSoTimeout(timeout);
+	//		 socketChannel.socket().setSoTimeout(timeout);
 			// limiting the time to establish a connection
 			isa = new InetSocketAddress(destIp, port);
 			
-		
-			socketChannel.socket().connect(isa, timeout);
+	//		socketChannel.socket().connect(isa, timeout);
+			socketChannel.connect(isa);
 			socketChannel.configureBlocking(false);
 			socketChannelList.add(socketChannel);
 			portList.add(port);
@@ -284,8 +284,8 @@ public class chat {
 				else if (command.length > 3)
 					printErrorMsg("Too many arguments");
 				else*/
-			//		connect(command[1], command[2]);
-				connect("localhost", ""+myPortNumber);
+					connect(command[1], command[2]);
+			//	connect("localhost", ""+myPortNumber);
 				break;
 			case "list":
 				if (command.length > 1)

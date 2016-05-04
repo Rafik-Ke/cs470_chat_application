@@ -14,24 +14,24 @@ public class chat {
 	private int myPortNumber = 50001;
 	private String myIp;
 	private boolean exit = false;
+	ServerSocketChannel serverSocketChannel;
 	List<SocketChannel> socketChannelList = new ArrayList<SocketChannel>();
 	List<String> ipList = new ArrayList<String>();
 	List<Integer> portList = new ArrayList<Integer>();
 	Selector socketSelector;
-	ServerSocketChannel serverSocketChannel;
-	SocketChannel socketChannel;
+	
+//	SocketChannel socketChannel;
 	private ByteBuffer readBuffer = ByteBuffer.allocate(9000);
 
 	public static void main(String[] args) throws Exception {
 			chat chatApp = new chat();
 			try {
 			//	chatApp.setMyPortNumber(Integer.parseInt(args[0]));
-				chatApp.takeInput();
 				chatApp.serverRunner();
-				
+				chatApp.takeInput();
 			} catch (Exception e) {
 				e.printStackTrace();
-				System.out.println("Please run the program with this format: chat <port number>");
+				System.out.println("Please run the program with this format:java chat <port number>");
 			}
 	}
 
@@ -72,28 +72,29 @@ public class chat {
 						if (!key.isValid()) {
 							continue;
 						}
-						// Check what event is available and deal with it
+						// check the request is a new connection or reading from a connection
 						//new connection request
 						if (key.isAcceptable()) {
 							this.accept(key);
-							//connection already exists
+						//connection already exists reading from a connection
 						} else if (key.isReadable()) {
 							this.read(key);
-						}
+						}else if (key.isConnectable())
+							System.out.println("socket closed");
 					}
 				} catch (Exception e) {
-					e.printStackTrace();
+					System.out.println("oops");
 				}
 			}
 		} catch (Exception e) {
+			System.out.println("oops 2");
 		}
 	}
+	
+	//creates a new connection by using the selector key
 	private void accept(SelectionKey key) throws IOException {
-		// For an accept to be pending the channel must be a server socket
-		// channel.
-		ServerSocketChannel serverSocketChannel = (ServerSocketChannel) key.channel();
 
-		// Accept the connection and make it non-blocking
+		ServerSocketChannel serverSocketChannel = (ServerSocketChannel) key.channel();
 		SocketChannel socketChannel = serverSocketChannel.accept();
 		Socket socket = socketChannel.socket();
 		socketChannel.configureBlocking(false);
@@ -101,41 +102,39 @@ public class chat {
 		// Register the new SocketChannel with our Selector, indicating
 		// we'd like to be notified when there's data waiting to be read
 		socketChannel.register(socketSelector, SelectionKey.OP_READ);
+		
+		socketChannelList.add(socketChannel);
+		portList.add(myPortNumber);
 	}
 	
 	private void read(SelectionKey key) throws IOException {
+		
 	    SocketChannel socketChannel = (SocketChannel) key.channel();
-
-	    // Clear out our read buffer so it's ready for new data
 	    readBuffer.clear();
 	    
 	    // Attempt to read off the channel
 	    int numRead;
 	    try {
 	      numRead = socketChannel.read(readBuffer);
+	      
 	    } catch (IOException e) {
-	      // The remote forcibly closed the connection, cancel
-	      // the selection key and close the channel.
 	      key.cancel();
 	      socketChannel.close();
 	      return;
 	    }
 
-	    if (numRead == -1) {
+/*	    if (numRead == -1) {
 	      // Remote entity shut the socket down cleanly. Do the
 	      // same from our end and cancel the channel.
 	      key.channel().close();
 	      key.cancel();
 	      return;
-	    }
+	    }*/
 	    
 	    byte[] data = new byte[numRead];
 		System.arraycopy(readBuffer.array(), 0, data, 0, numRead);
 		
 		System.out.println(new String(data));
-
-	    // Hand the data off to our worker thread
-	//    this.worker.processData(this, socketChannel, this.readBuffer.array(), numRead); 
 	  }
 	
 	// print the ip address
@@ -167,14 +166,15 @@ public class chat {
 			 * { if (destIp.equals(ipList.get(i))) { System.out.println(
 			 * "The connection already exists"); conExists = true; } } }
 			 */
-			// socketChannel.socket().setSoTimeout(timeout);
+			 socketChannel.socket().setSoTimeout(timeout);
 			// limiting the time to establish a connection
 			isa = new InetSocketAddress(destIp, port);
 			
 		
-			socketChannel.connect(isa);
+			socketChannel.socket().connect(isa, timeout);
 			socketChannel.configureBlocking(false);
 			socketChannelList.add(socketChannel);
+			portList.add(port);
 		//	if (!conExists)
 			//	socketChannel.socket().connect(new InetSocketAddress(destIp, port), timeout);
 
@@ -198,26 +198,36 @@ public class chat {
 		byte[] message = new String(msg).getBytes();
 		ByteBuffer buffer = ByteBuffer.wrap(message);
 
+		if(socketChannelList.get(id).isConnected())
 		socketChannelList.get(id).write(buffer);
 
-		System.out.println(socketChannelList.get(id).isConnected());
+	//	System.out.println(socketChannelList.get(id).isConnected());
 
 		buffer.clear();
 
 	}
 
 
-	public void list() {
-		System.out.println("list");
+	public void list() throws IOException {
+		for (int i = 0; i < socketChannelList.size(); i++)
+			System.out.println((i + 1) + " " + socketChannelList.get(i).getRemoteAddress() + " " + portList.get(i));
 	}
 
-	public void terminate(String conId) {
+	public void terminate(String conId)  {
 		System.out.println("terminate");
+		try{
+		int id = Integer.parseInt(conId);
+		socketChannelList.get(id).close();
+		socketChannelList.remove(id);
+		}catch(Exception e){
+			e.printStackTrace();
+		}
 	}
 
-	public void exit() {
+	public void exit() throws IOException {
 		// close the connection
-	//	srvSocket.close();
+		serverSocketChannel.close();
+		this.exit = true;
 		System.out.println("exit");
 	}
 
@@ -267,14 +277,15 @@ public class chat {
 					getMyPortNumber();
 				break;
 			case "connect":
-				if (command.length == 1)
+/*				if (command.length == 1)
 					printErrorMsg("The destination is not specified");
 				else if (command.length == 2)
 					printErrorMsg("The port number is not specified");
 				else if (command.length > 3)
 					printErrorMsg("Too many arguments");
-				else
-					connect(command[1], command[2]);
+				else*/
+			//		connect(command[1], command[2]);
+				connect("localhost", ""+myPortNumber);
 				break;
 			case "list":
 				if (command.length > 1)

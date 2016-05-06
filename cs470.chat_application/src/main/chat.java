@@ -188,12 +188,13 @@ public class chat {
 				conExists = true;
 			} else {
 				for (int i = 0; i < connections.size(); i++) {
-					if (destIp.equals(connections.get(i))) {
+					if (destIp.equals(connections.get(i).getConnectionIp())) {
 						System.out.println("The connection already exists");
 						conExists = true;
 					}
 				}
 			}
+			
 			socketChannel.socket().setSoTimeout(timeout);
 			if (!conExists) {
 				isa = new InetSocketAddress(destIp, port);
@@ -211,17 +212,7 @@ public class chat {
 				// make a hidden connection
 				send("" + connections.size(), "connectToPort " + getMyPortNumber());
 				serverConnected = false;
-			}else if(conExists && !serverConnected){
-				isa = new InetSocketAddress(destIp, port);
-
-				// socketChannel.socket().connect(isa, timeout);
-				socketChannel.connect(isa);
-				socketChannel.configureBlocking(false);
-				serverConnected = true;				
-			}
-			
-			
-			
+			}	
 			
 		} catch (Exception e) {
 			e.printStackTrace();

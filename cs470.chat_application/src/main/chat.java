@@ -11,13 +11,13 @@ import java.nio.channels.spi.SelectorProvider;
 import java.util.*;
 
 public class chat {
-	private int myPortNumber = 4444;
+	private int myPortNumber = 5555;
 	private String myIp;
 	private boolean exit = false;
 	private List<Connection> connections = new ArrayList<Connection>();
 	private ServerSocketChannel serverSocketChannel;
 	private Selector socketSelector;
-	private ByteBuffer readBuffer ;
+	private ByteBuffer readBuffer;
 
 	public static void main(String[] args) throws Exception {
 		chat chatApp = new chat();
@@ -32,7 +32,8 @@ public class chat {
 	}
 
 	public void serverRunner() throws IOException {
-		socketSelector = SelectorProvider.provider().openSelector();
+		// socketSelector = SelectorProvider.provider().openSelector();
+		socketSelector = Selector.open();
 		serverSocketChannel = ServerSocketChannel.open();
 		serverSocketChannel.configureBlocking(false);
 		serverSocketChannel.register(socketSelector, SelectionKey.OP_ACCEPT);
@@ -77,9 +78,10 @@ public class chat {
 						this.accept(key);
 						// connection already exists reading message
 					} else if (key.isReadable()) {
+
 						this.read(key);
 						// handles the terminated socket
-					} else if (!key.isConnectable()) {
+					} else if (key.isConnectable()) {
 						System.out.println("socket closed");
 					}
 				}
@@ -102,15 +104,15 @@ public class chat {
 			// Register the new SocketChannel in the selector for waiting for
 			// the client
 			socketChannel.register(socketSelector, SelectionKey.OP_READ);
-			
+
 			String rip = getRemoteIP(socketChannel);
 
 			System.out.println("New connection from: " + rip);
-			
-			Connection con = new Connection(socketChannel, rip, getMyPortNumber(), "server");		
-			
+
+			Connection con = new Connection(socketChannel, rip, getMyPortNumber(), "server");
+
 			connections.add(con);
-			
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -126,18 +128,28 @@ public class chat {
 			numRead = socketChannel.read(readBuffer);
 			byte[] data = new byte[numRead];
 			System.arraycopy(readBuffer.array(), 0, data, 0, numRead);
-			
+
 			String message = new String(data);
-			if(message.contains("terminatess")){
+			if (message.contains("terminatess")) {
 				System.out.println("Peer " + message.split(" ")[0] + " terminates the connection");
 				key.channel().close();
 				key.cancel();
 				socketChannel.close();
-				for(int i = 0; i < connections.size(); i++)
-					if(connections.get(i).getConnectionPort() == Integer.parseInt(message.split(" ")[2]))
+				for (int i = 0; i < connections.size(); i++)
+					if (connections.get(i).getConnectionPort() == Integer.parseInt(message.split(" ")[2]))
 						connections.remove(i);
 				return;
 			}
+
+			if (message.contains("connectToPort")) {
+				String remotePort = message.split(" ")[1];
+				connect(getRemoteIP(socketChannel), remotePort);
+				key.channel().close();
+				key.cancel();
+				socketChannel.close();
+				return;
+			}
+
 			System.out.println("Message received from " + getRemoteIP(socketChannel) + ": " + new String(data));
 		} catch (Exception e) {
 			key.cancel();
@@ -160,52 +172,57 @@ public class chat {
 		buffer.clear();
 	}
 
-	// print the ip address
-	public String myip() throws UnknownHostException, SocketException {
-		System.out.println("The IP address is " + getMyIp());
-		// this is the fake ip will be commented
-/*		System.out.println("the fake " + NetworkInterface.getNetworkInterfaces().nextElement().getInetAddresses()
-				.nextElement().getHostAddress()); // returns "127.0.0.1"
-*/		return myIp;
-	}
-
-	public void connect(String destIp, String p) throws Exception {
+	public void connect(String destIp, String destPort) throws Exception {
 		SocketChannel socketChannel = null;
 		InetSocketAddress isa = null;
 		PrintStream ps = null;
 		int timeout = 20000;
 		boolean conExists = false;
+		boolean serverConnected = true;
 		try {
-			int port = Integer.parseInt(p);
+			int port = Integer.parseInt(destPort);
 			socketChannel = SocketChannel.open();
 
-			/*
-			 * if (destIp.equals(getMyIp()) ||
-			 * destIp.toLowerCase().equals("localhost") ||
-			 * destIp.equals("127.0.0.1")) { System.out.println(
-			 * "The connection request is from the same computer"); conExists =
-			 * true; } else { for (int i = 0; i < socketChannelList.size(); i++)
-			 * { if (destIp.equals(ipList.get(i)) && portNumber.equals(..)) {
-			 * System.out.println( "The connection already exists"); conExists =
-			 * true; } } }
-			 */
-
+			if (destIp.equals(getMyIp()) || destIp.toLowerCase().equals("localhost") || destIp.equals("127.0.0.1")) {
+				System.out.println("The connection request is from the same computer");
+				conExists = true;
+			} else {
+				for (int i = 0; i < connections.size(); i++) {
+					if (destIp.equals(connections.get(i))) {
+						System.out.println("The connection already exists");
+						conExists = true;
+					}
+				}
+			}
+			socketChannel.socket().setSoTimeout(timeout);
 			if (!conExists) {
-				// limiting the time to establish a connection
-				socketChannel.socket().setSoTimeout(timeout);
-
 				isa = new InetSocketAddress(destIp, port);
 
 				// socketChannel.socket().connect(isa, timeout);
 				socketChannel.connect(isa);
 				socketChannel.configureBlocking(false);
+
 				System.out.println("The connection to peer " + destIp + " is successfully established;");
-				
-				Connection con = new Connection(socketChannel, destIp, port, "client");		
-				
+
+				Connection con = new Connection(socketChannel, destIp, port, "client");
+
 				connections.add(con);
 
+				// make a hidden connection
+				send("" + connections.size(), "connectToPort " + getMyPortNumber());
+				serverConnected = false;
+			}else if(conExists && !serverConnected){
+				isa = new InetSocketAddress(destIp, port);
+
+				// socketChannel.socket().connect(isa, timeout);
+				socketChannel.connect(isa);
+				socketChannel.configureBlocking(false);
+				serverConnected = true;				
 			}
+			
+			
+			
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.out.println("something is wrong");
@@ -217,14 +234,16 @@ public class chat {
 	public void list() throws IOException {
 		System.out.println("id: IP address               Port No. 		connection type");
 		for (int i = 0; i < connections.size(); i++) {
-			System.out.println((i + 1) + " " + connections.get(i).getConnectionIp() + " " + connections.get(i).getConnectionPort() + " " + connections.get(i).getMaker());
+			if (connections.get(i).getSocketChannel().isConnected() && connections.get(i).getSocketChannel().isOpen())
+				System.out.println((i + 1) + " " + connections.get(i).getConnectionIp() + " "
+						+ connections.get(i).getConnectionPort() + " " + connections.get(i).getMaker());
 		}
 	}
 
 	public void terminate(String conId) {
 		try {
 			int id = Integer.parseInt(conId) - 1;
-			if(connections.get(id).getMaker().equals("client"))
+			if (connections.get(id).getMaker().equals("client"))
 				send(conId, getMyIp() + " terminatess " + connections.get(id).getConnectionPort());
 			connections.get(id).getSocketChannel().close();
 			connections.remove(id);
@@ -236,7 +255,7 @@ public class chat {
 	public void exit() throws IOException {
 		// close the connection
 		this.exit = true;
-		for(Connection i : connections)
+		for (Connection i : connections)
 			i.getSocketChannel().close();
 		serverSocketChannel.close();
 		System.out.println("exit");
@@ -244,6 +263,10 @@ public class chat {
 
 	public int getMyPortNumber() {
 		return this.myPortNumber;
+	}
+
+	public void setMyPortNumber(int port) {
+		this.myPortNumber = port;
 	}
 
 	public String getMyIp() throws UnknownHostException {
@@ -279,7 +302,7 @@ public class chat {
 				if (command.length > 1)
 					System.out.println("Too many arguments");
 				else
-					myip();
+					System.out.println("The IP address is " + getMyIp());
 				break;
 			case "myport":
 				if (command.length > 1)
@@ -391,7 +414,7 @@ class Connection {
 	private String connectionIp;
 	private int connectionPort;
 	private String maker;
-	
+
 	public Connection(SocketChannel socketChannel, String connectionIp, int connectionPort, String maker) {
 		super();
 		this.socketChannel = socketChannel;

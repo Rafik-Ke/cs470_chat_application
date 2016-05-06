@@ -11,7 +11,7 @@ import java.nio.channels.spi.SelectorProvider;
 import java.util.*;
 
 public class chat {
-	private int myPortNumber = 50001;
+	private int myPortNumber = 4444;
 	private String myIp;
 	private boolean exit = false;
 	private List<Connection> connections = new ArrayList<Connection>();
@@ -132,6 +132,10 @@ public class chat {
 				System.out.println("Peer " + message.split(" ")[0] + " terminates the connection");
 				key.channel().close();
 				key.cancel();
+				socketChannel.close();
+				for(int i = 0; i < connections.size(); i++)
+					if(connections.get(i).getConnectionPort() == Integer.parseInt(message.split(" ")[2]))
+						connections.remove(i);
 				return;
 			}
 			System.out.println("Message received from " + getRemoteIP(socketChannel) + ": " + new String(data));
@@ -160,9 +164,9 @@ public class chat {
 	public String myip() throws UnknownHostException, SocketException {
 		System.out.println("The IP address is " + getMyIp());
 		// this is the fake ip will be commented
-		System.out.println("the fake " + NetworkInterface.getNetworkInterfaces().nextElement().getInetAddresses()
+/*		System.out.println("the fake " + NetworkInterface.getNetworkInterfaces().nextElement().getInetAddresses()
 				.nextElement().getHostAddress()); // returns "127.0.0.1"
-		return myIp;
+*/		return myIp;
 	}
 
 	public void connect(String destIp, String p) throws Exception {
@@ -221,7 +225,7 @@ public class chat {
 		try {
 			int id = Integer.parseInt(conId) - 1;
 			if(connections.get(id).getMaker().equals("client"))
-				send(conId, getMyIp() + " terminatess");
+				send(conId, getMyIp() + " terminatess " + connections.get(id).getConnectionPort());
 			connections.get(id).getSocketChannel().close();
 			connections.remove(id);
 		} catch (Exception e) {

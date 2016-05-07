@@ -95,13 +95,13 @@ public class chat {
 		try {
 			ServerSocketChannel serverSocketChannel = (ServerSocketChannel) key.channel();
 			SocketChannel socketChannel = serverSocketChannel.accept();
-			// Socket socket = socketChannel.socket();
+			//Socket socket = socketChannel.socket();
 			socketChannel.configureBlocking(false);
 
-			// Register the new SocketChannel in the selector for waiting for
-			// the client
+			//Register the new SocketChannel in the selector and wait for client
 			socketChannel.register(socketSelector, SelectionKey.OP_READ);
 			String rip = getRemoteIP(socketChannel);
+			if(!connections.get(connections.size()-1).getConnectionIp().equals(rip))
 			System.out.println("New connection from: " + rip);
 
 /*			Connection con = new Connection(socketChannel, rip, getMyPortNumber(), "server");
@@ -113,18 +113,22 @@ public class chat {
 
 	// reading the message using the key of the socketchannel
 	private void read(SelectionKey key) throws IOException {
-		readBuffer = ByteBuffer.allocate(9000);
-		SocketChannel socketChannel = (SocketChannel) key.channel();
-		int numRead;
 		
-		System.out.println(" reading ");
+		readBuffer = ByteBuffer.allocate(9000);
+
+		SocketChannel socketChannel = (SocketChannel) key.channel();
+		
+		int numRead=-1;
+
 		try {
+			
 			readBuffer.clear();
 			numRead = socketChannel.read(readBuffer);
 			byte[] data = new byte[numRead];
+
 			System.arraycopy(readBuffer.array(), 0, data, 0, numRead);
 			String message = new String(data);
-			
+						
 			String trmIp = message.split(" ")[0];
 			if (message.contains("terminatess")) {
 				System.out.println("Peer " + trmIp + " terminates the connection");
@@ -228,18 +232,18 @@ public class chat {
 	}
 
 	public void list() throws IOException {
-		System.out.println("id: IP address               Port No. 		connection type");
+		System.out.println("id: IP address               Port No.");
 		for (int i = 0; i < connections.size(); i++) {
 			if (connections.get(i).getSocketChannel().isConnected() && connections.get(i).getSocketChannel().isOpen())
 				System.out.println((i + 1) + " " + connections.get(i).getConnectionIp() + " "
-						+ connections.get(i).getDesplayPort());
+						+ connections.get(i).getDisplayPort());
 		}
 	}
 
 	public void terminate(String conId) {
 		try {
 			int id = Integer.parseInt(conId) - 1;
-			if(connections.get(id).getRealPort() == connections.get(id).getDesplayPort())
+		//	if(connections.get(id).getRealPort() == connections.get(id).getDisplayPort())
 				send(conId, getMyIp() + " terminatess " + connections.get(id).getRealPort());
 			connections.get(id).getSocketChannel().close();
 			connections.remove(id);
@@ -433,10 +437,10 @@ class Connection {
 	public void setConnectionIp(String connectionIp) {
 		this.connectionIp = connectionIp;
 	}
-	public int getDesplayPort() {
+	public int getDisplayPort() {
 		return displayPort;
 	}
-	public void setDesplayPort(int desplayPort) {
+	public void setDisplayPort(int desplayPort) {
 		this.displayPort = desplayPort;
 	}
 	public int getRealPort() {

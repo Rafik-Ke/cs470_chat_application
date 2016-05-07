@@ -10,10 +10,10 @@ import java.nio.channels.SocketChannel;
 import java.util.*;
 
 public class chat {
-	private int myPortNumber = 5555;
+	private int myPortNumber = 4444;
 	private String myIp;
 	private boolean exit = false;
-	private List<ConnectionB> connections = new ArrayList<ConnectionB>();
+	private List<Connection> connections = new ArrayList<Connection>();
 	private ServerSocketChannel serverSocketChannel;
 	private Selector socketSelector;
 	private ByteBuffer readBuffer;
@@ -115,13 +115,15 @@ public class chat {
 		readBuffer = ByteBuffer.allocate(9000);
 		SocketChannel socketChannel = (SocketChannel) key.channel();
 		int numRead;
+		
+		System.out.println(" reading ");
 		try {
 			readBuffer.clear();
 			numRead = socketChannel.read(readBuffer);
 			byte[] data = new byte[numRead];
 			System.arraycopy(readBuffer.array(), 0, data, 0, numRead);
-
 			String message = new String(data);
+			
 			if (message.contains("terminatess")) {
 				System.out.println("Peer " + message.split(" ")[0] + " terminates the connection");
 				key.channel().close();
@@ -135,9 +137,9 @@ public class chat {
 			if (message.contains("connectToPort")) {
 				String remotePort = message.split(" ")[1];
 				connect(getRemoteIP(socketChannel), remotePort, 2);
-				key.channel().close();
-				key.cancel();
-				socketChannel.close();
+		//		key.channel().close();
+			//	key.cancel();
+		//		socketChannel.close();
 				return;
 			}
 			System.out.println("Message received from " + getRemoteIP(socketChannel) + ": " + new String(data));
@@ -154,9 +156,11 @@ public class chat {
 
 		byte[] message = new String(msg).getBytes();
 		ByteBuffer buffer = ByteBuffer.wrap(message);
-
-		if (connections.get(id).getSocketChannel().isConnected())
+System.out.println("sending 1");
+		if (connections.get(id).getSocketChannel().isConnected()){
+		System.out.println("sending 2");
 			connections.get(id).getSocketChannel().write(buffer);
+		}
 
 		buffer.clear();
 	}
@@ -171,7 +175,7 @@ public class chat {
 		try {
 			int port = Integer.parseInt(destPort);
 			socketChannel = SocketChannel.open();
-
+/*
 			if (destIp.equals(getMyIp()) || destIp.toLowerCase().equals("localhost") || destIp.equals("127.0.0.1")) {
 				System.out.println("The connection request is from the same computer");
 				conExists = true;
@@ -183,7 +187,7 @@ public class chat {
 					}
 				}
 			}
-
+*/
 			socketChannel.socket().setSoTimeout(timeout);
 			if (!conExists && src == 1) {
 				isa = new InetSocketAddress(destIp, port);
@@ -194,7 +198,7 @@ public class chat {
 
 				System.out.println("The connection to peer " + destIp + " is successfully established;");
 
-				ConnectionB con = new ConnectionB(socketChannel, destIp, port, "client");
+				Connection con = new Connection(socketChannel, destIp, port, "client");
 
 				connections.add(con);
 
@@ -203,7 +207,7 @@ public class chat {
 				serverConnected = false;
 				return;
 			}
-			//this is a request from the same machine's server
+			//this is a request from the same machine's server making connection to the client machine
 			if(src == 2){
 				isa = new InetSocketAddress(destIp, port);
 
@@ -211,9 +215,7 @@ public class chat {
 				socketChannel.connect(isa);
 				socketChannel.configureBlocking(false);
 
-				System.out.println("The connection to peer " + destIp + " is successfully established;");
-
-				ConnectionB con = new ConnectionB(socketChannel, destIp, port, "client");
+				Connection con = new Connection(socketChannel, destIp, port, "client");
 
 				connections.add(con);
 			}
@@ -250,7 +252,7 @@ public class chat {
 	public void exit() throws IOException {
 		// close the connection
 		this.exit = true;
-		for (ConnectionB i : connections)
+		for (Connection i : connections)
 			i.getSocketChannel().close();
 		serverSocketChannel.close();
 		System.out.println("exit");

@@ -7,14 +7,13 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.nio.channels.spi.SelectorProvider;
 import java.util.*;
 
 public class chat {
 	private int myPortNumber = 5555;
 	private String myIp;
 	private boolean exit = false;
-	private List<Connection> connections = new ArrayList<Connection>();
+	private List<ConnectionB> connections = new ArrayList<ConnectionB>();
 	private ServerSocketChannel serverSocketChannel;
 	private Selector socketSelector;
 	private ByteBuffer readBuffer;
@@ -71,14 +70,11 @@ public class chat {
 						continue;
 					}
 					// check the request is a new connection or reading
-					// from
-					// a connection
-					// new connection request
+					// from a connection new connection request
 					if (key.isAcceptable()) {
 						this.accept(key);
 						// connection already exists reading message
 					} else if (key.isReadable()) {
-
 						this.read(key);
 						// handles the terminated socket
 					} else if (key.isConnectable()) {
@@ -104,15 +100,11 @@ public class chat {
 			// Register the new SocketChannel in the selector for waiting for
 			// the client
 			socketChannel.register(socketSelector, SelectionKey.OP_READ);
-
 			String rip = getRemoteIP(socketChannel);
-
 			System.out.println("New connection from: " + rip);
 
-			Connection con = new Connection(socketChannel, rip, getMyPortNumber(), "server");
-
-			connections.add(con);
-
+/*			Connection con = new Connection(socketChannel, rip, getMyPortNumber(), "server");
+			connections.add(con);*/
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -140,23 +132,20 @@ public class chat {
 						connections.remove(i);
 				return;
 			}
-
 			if (message.contains("connectToPort")) {
 				String remotePort = message.split(" ")[1];
-				connect(getRemoteIP(socketChannel), remotePort);
+				connect(getRemoteIP(socketChannel), remotePort, 2);
 				key.channel().close();
 				key.cancel();
 				socketChannel.close();
 				return;
 			}
-
 			System.out.println("Message received from " + getRemoteIP(socketChannel) + ": " + new String(data));
 		} catch (Exception e) {
 			key.cancel();
 			socketChannel.close();
 			return;
 		}
-
 	}
 
 	public void send(String conId, String msg) throws IOException {
@@ -172,7 +161,7 @@ public class chat {
 		buffer.clear();
 	}
 
-	public void connect(String destIp, String destPort) throws Exception {
+	public void connect(String destIp, String destPort, int src) throws Exception {
 		SocketChannel socketChannel = null;
 		InetSocketAddress isa = null;
 		PrintStream ps = null;
@@ -194,9 +183,9 @@ public class chat {
 					}
 				}
 			}
-			
+
 			socketChannel.socket().setSoTimeout(timeout);
-			if (!conExists) {
+			if (!conExists && src == 1) {
 				isa = new InetSocketAddress(destIp, port);
 
 				// socketChannel.socket().connect(isa, timeout);
@@ -205,15 +194,30 @@ public class chat {
 
 				System.out.println("The connection to peer " + destIp + " is successfully established;");
 
-				Connection con = new Connection(socketChannel, destIp, port, "client");
+				ConnectionB con = new ConnectionB(socketChannel, destIp, port, "client");
 
 				connections.add(con);
 
-				// make a hidden connection
+				// make a hidden connection from the newly connected server to this ip and port
 				send("" + connections.size(), "connectToPort " + getMyPortNumber());
 				serverConnected = false;
-			}	
-			
+				return;
+			}
+			//this is a request from the same machine's server
+			if(src == 2){
+				isa = new InetSocketAddress(destIp, port);
+
+				// socketChannel.socket().connect(isa, timeout);
+				socketChannel.connect(isa);
+				socketChannel.configureBlocking(false);
+
+				System.out.println("The connection to peer " + destIp + " is successfully established;");
+
+				ConnectionB con = new ConnectionB(socketChannel, destIp, port, "client");
+
+				connections.add(con);
+			}
+
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.out.println("something is wrong");
@@ -246,7 +250,7 @@ public class chat {
 	public void exit() throws IOException {
 		// close the connection
 		this.exit = true;
-		for (Connection i : connections)
+		for (ConnectionB i : connections)
 			i.getSocketChannel().close();
 		serverSocketChannel.close();
 		System.out.println("exit");
@@ -302,14 +306,16 @@ public class chat {
 					System.out.println("The program runs on port number " + getMyPortNumber());
 				break;
 			case "connect":
-				/*
-				 * if (command.length == 1) printErrorMsg(
-				 * "The destination is not specified"); else if (command.length
-				 * == 2) printErrorMsg("The port number is not specified"); else
-				 * if (command.length > 3) printErrorMsg("Too many arguments");
-				 * else
-				 */
-				connect(command[1], command[2]);
+
+				if (command.length == 1)
+					printErrorMsg("The destination is not specified");
+				else if (command.length == 2)
+					printErrorMsg("The port number is not specified");
+				else if (command.length > 3)
+					printErrorMsg("Too many arguments");
+				else
+
+					connect(command[1], command[2], 1);
 				// connect("localhost", ""+myPortNumber);
 				break;
 			case "list":

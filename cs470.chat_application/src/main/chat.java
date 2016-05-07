@@ -10,6 +10,7 @@ import java.nio.channels.SocketChannel;
 import java.util.*;
 
 public class chat {
+	private final int CON_REQUEST = 1, CON_RESPONSE = 2;
 	private int myPortNumber = 4444;
 	private String myIp;
 	private boolean exit = false;
@@ -124,26 +125,31 @@ public class chat {
 			System.arraycopy(readBuffer.array(), 0, data, 0, numRead);
 			String message = new String(data);
 			
+			String trmIp = message.split(" ")[0];
 			if (message.contains("terminatess")) {
-				System.out.println("Peer " + message.split(" ")[0] + " terminates the connection");
+				System.out.println("Peer " + trmIp + " terminates the connection");
+				
+				for(int i = 0; i < connections.size(); i++)
+					if(connections.get(i).getConnectionIp().equals(trmIp))
+						terminate(""+i);
+				
+				
 				key.channel().close();
 				key.cancel();
 				socketChannel.close();
 				for (int i = 0; i < connections.size(); i++)
-					if (connections.get(i).getConnectionPort() == Integer.parseInt(message.split(" ")[2]))
+					if (connections.get(i).getRealPort() == Integer.parseInt(message.split(" ")[2]))
 						connections.remove(i);
 				return;
 			}
 			if (message.contains("connectToPort")) {
 				String remotePort = message.split(" ")[1];
-				connect(getRemoteIP(socketChannel), remotePort, 2);
-		//		key.channel().close();
-			//	key.cancel();
-		//		socketChannel.close();
+				connect(getRemoteIP(socketChannel), remotePort, CON_RESPONSE);
 				return;
 			}
 			System.out.println("Message received from " + getRemoteIP(socketChannel) + ": " + new String(data));
 		} catch (Exception e) {
+			key.channel().close();
 			key.cancel();
 			socketChannel.close();
 			return;
@@ -151,27 +157,20 @@ public class chat {
 	}
 
 	public void send(String conId, String msg) throws IOException {
-
 		int id = Integer.parseInt(conId) - 1;
-
 		byte[] message = new String(msg).getBytes();
 		ByteBuffer buffer = ByteBuffer.wrap(message);
-System.out.println("sending 1");
 		if (connections.get(id).getSocketChannel().isConnected()){
-		System.out.println("sending 2");
 			connections.get(id).getSocketChannel().write(buffer);
 		}
-
 		buffer.clear();
 	}
 
 	public void connect(String destIp, String destPort, int src) throws Exception {
 		SocketChannel socketChannel = null;
 		InetSocketAddress isa = null;
-		PrintStream ps = null;
 		int timeout = 20000;
 		boolean conExists = false;
-		boolean serverConnected = true;
 		try {
 			int port = Integer.parseInt(destPort);
 			socketChannel = SocketChannel.open();
@@ -189,7 +188,7 @@ System.out.println("sending 1");
 			}
 */
 			socketChannel.socket().setSoTimeout(timeout);
-			if (!conExists && src == 1) {
+			if (!conExists && src == CON_REQUEST) {
 				isa = new InetSocketAddress(destIp, port);
 
 				// socketChannel.socket().connect(isa, timeout);
@@ -198,24 +197,24 @@ System.out.println("sending 1");
 
 				System.out.println("The connection to peer " + destIp + " is successfully established;");
 
-				Connection con = new Connection(socketChannel, destIp, port, "client");
+				Connection con = new Connection(socketChannel, destIp, port, port);
 
 				connections.add(con);
 
 				// make a hidden connection from the newly connected server to this ip and port
 				send("" + connections.size(), "connectToPort " + getMyPortNumber());
-				serverConnected = false;
+
 				return;
 			}
 			//this is a request from the same machine's server making connection to the client machine
-			if(src == 2){
+			if(src == CON_RESPONSE){
 				isa = new InetSocketAddress(destIp, port);
 
 				// socketChannel.socket().connect(isa, timeout);
 				socketChannel.connect(isa);
 				socketChannel.configureBlocking(false);
 
-				Connection con = new Connection(socketChannel, destIp, port, "client");
+				Connection con = new Connection(socketChannel, destIp, myPortNumber, port);
 
 				connections.add(con);
 			}
@@ -233,15 +232,15 @@ System.out.println("sending 1");
 		for (int i = 0; i < connections.size(); i++) {
 			if (connections.get(i).getSocketChannel().isConnected() && connections.get(i).getSocketChannel().isOpen())
 				System.out.println((i + 1) + " " + connections.get(i).getConnectionIp() + " "
-						+ connections.get(i).getConnectionPort() + " " + connections.get(i).getMaker());
+						+ connections.get(i).getDesplayPort());
 		}
 	}
 
 	public void terminate(String conId) {
 		try {
 			int id = Integer.parseInt(conId) - 1;
-			if (connections.get(id).getMaker().equals("client"))
-				send(conId, getMyIp() + " terminatess " + connections.get(id).getConnectionPort());
+			if(connections.get(id).getRealPort() == connections.get(id).getDesplayPort())
+				send(conId, getMyIp() + " terminatess " + connections.get(id).getRealPort());
 			connections.get(id).getSocketChannel().close();
 			connections.remove(id);
 		} catch (Exception e) {
@@ -250,12 +249,14 @@ System.out.println("sending 1");
 	}
 
 	public void exit() throws IOException {
-		// close the connection
+		
 		this.exit = true;
-		for (Connection i : connections)
-			i.getSocketChannel().close();
+		// terminate all the connections
+		for (int i = 0; i < connections.size(); i++) {
+			terminate(""+i);
+			connections.get(i).getSocketChannel().close();
+		}
 		serverSocketChannel.close();
-		System.out.println("exit");
 	}
 
 	public int getMyPortNumber() {
@@ -316,9 +317,7 @@ System.out.println("sending 1");
 				else if (command.length > 3)
 					printErrorMsg("Too many arguments");
 				else
-
-					connect(command[1], command[2], 1);
-				// connect("localhost", ""+myPortNumber);
+					connect(command[1], command[2], CON_REQUEST);
 				break;
 			case "list":
 				if (command.length > 1)
@@ -411,46 +410,39 @@ System.out.println("sending 1");
 class Connection {
 	private SocketChannel socketChannel;
 	private String connectionIp;
-	private int connectionPort;
-	private String maker;
+	private int displayPort;
+	private int realPort;
+	
 
-	public Connection(SocketChannel socketChannel, String connectionIp, int connectionPort, String maker) {
+	public Connection(SocketChannel socketChannel, String connectionIp, int desplayPort, int realPort) {
 		super();
 		this.socketChannel = socketChannel;
 		this.connectionIp = connectionIp;
-		this.connectionPort = connectionPort;
-		this.maker = maker;
+		this.displayPort = desplayPort;
+		this.realPort = realPort;
 	}
-
 	public SocketChannel getSocketChannel() {
 		return socketChannel;
 	}
-
 	public void setSocketChannel(SocketChannel socketChannel) {
 		this.socketChannel = socketChannel;
 	}
-
 	public String getConnectionIp() {
 		return connectionIp;
 	}
-
 	public void setConnectionIp(String connectionIp) {
 		this.connectionIp = connectionIp;
 	}
-
-	public int getConnectionPort() {
-		return connectionPort;
+	public int getDesplayPort() {
+		return displayPort;
 	}
-
-	public void setConnectionPort(int connectionPort) {
-		this.connectionPort = connectionPort;
+	public void setDesplayPort(int desplayPort) {
+		this.displayPort = desplayPort;
 	}
-
-	public String getMaker() {
-		return maker;
+	public int getRealPort() {
+		return realPort;
 	}
-
-	public void setMaker(String maker) {
-		this.maker = maker;
+	public void setRealPort(int realPort) {
+		this.realPort = realPort;
 	}
 }

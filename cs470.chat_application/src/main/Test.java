@@ -19,15 +19,11 @@ public class Test {
 
 		Test test = new Test();
 
-		test.serverRunner();
+	//	test.serverRunner();
+		
+		test.connect("172.20.10.7", "40001");
 
-		System.out.println(test.i);
-
-		test.takeInput();
-
-		System.out.println(test.i);
-
-		System.out.println(test.exit);
+	//	test.takeInput();
 
 	}
 
@@ -140,7 +136,7 @@ public class Test {
 	public void connect(String ip, String port) throws Exception {
 		Socket socket = null;
 		PrintStream ps = null;
-		int timeout = 20000;
+		int timeout = 1000;
 		try {
 			// int p = Integer.parseInt(port);
 			// socket = new Socket(ip, p );

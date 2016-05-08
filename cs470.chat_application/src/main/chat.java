@@ -50,11 +50,10 @@ public class chat {
 
 	public void server() throws Exception {
 		// boolean conExists; //no need because client will not send connect
-		boolean terminated;
+		SelectionKey key = null;
 		while (!exit) {
 			// conExists = false;
 			try {
-				terminated = false;
 				// Wait for an event one of the registered channels
 				socketSelector.select();
 
@@ -62,7 +61,7 @@ public class chat {
 				Iterator<SelectionKey> selectedKeys = socketSelector.selectedKeys().iterator();
 
 				while (selectedKeys.hasNext()) {
-					SelectionKey key = (SelectionKey) selectedKeys.next();
+					key = (SelectionKey) selectedKeys.next();
 					selectedKeys.remove();
 					if (!key.isValid()) {
 						continue;
@@ -80,8 +79,13 @@ public class chat {
 
 				}
 			} catch (Exception e) {
-				e.printStackTrace();
+				e.getMessage();
 				break;
+			} finally {
+				if (key != null) {
+					key.channel().close();
+					key.cancel();
+				}
 			}
 		}
 	}
@@ -149,7 +153,7 @@ public class chat {
 	public void connect(String destIp, String dstPrt) throws Exception {
 		SocketChannel socketChannel = null;
 		InetSocketAddress isa = null;
-		int timeout = 20000;
+		int timeout = 5000;
 		boolean conExists = false;
 		try {
 			int destPort = Integer.parseInt(dstPrt);
@@ -170,8 +174,6 @@ public class chat {
 			socketChannel.socket().setSoTimeout(timeout);
 			if (!conExists) {
 				isa = new InetSocketAddress(destIp, destPort);
-
-				// socketChannel.socket().connect(isa, timeout);
 				socketChannel.connect(isa);
 				socketChannel.configureBlocking(false);
 
@@ -181,8 +183,7 @@ public class chat {
 				return;
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
-			System.out.println("something is wrong");
+			System.out.println("connection is not made correctly");
 		} finally {
 			socketChannel.close();
 		}
@@ -214,6 +215,7 @@ public class chat {
 		for (int i = 0; i < connections.size(); i++) {
 			terminate("" + i);
 		}
+		socketSelector.close();
 		serverSocketChannel.close();
 	}
 
@@ -268,7 +270,7 @@ public class chat {
 				 * "The destination is not specified"); else if (command.length
 				 * == 2) printErrorMsg("The port number is not specified"); else
 				 * if (command.length > 3) printErrorMsg("Too many arguments");
-				 * else connect(command[1], command[2], CON_REQUEST);
+				 * else connect(command[1], command[2]);
 				 */
 
 				connect("localhost", "1111");
@@ -406,5 +408,4 @@ class Connection {
 	public void setType(String type) {
 		this.type = type;
 	}
-
 }

@@ -19,11 +19,11 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.spi.SelectorProvider;
 import java.util.*;
 
 public class chat {
-	private final int CON_REQUEST = 1, CON_RESPONSE = 2;
-	private int myPortNumber = 4444;
+	private int myPortNumber = 1111;
 	private boolean exit = false;
 	private List<Connection> connections = new ArrayList<Connection>();
 	private ServerSocketChannel serverSocketChannel;
@@ -80,25 +80,26 @@ public class chat {
 					}
 					// check the request is a new connection or reading
 					// from a connection new connection request
-					if (key.isAcceptable()) {
+					else if (key.isAcceptable()) {
 						this.accept(key);
+						return;
 						// connection already exists, reading message
 					} else if (key.isReadable()) {
 						this.read(key);
+						return;
 					} else if (key.isConnectable()) {
 						System.out.println("is connectable");
+						return;
 					}
 
 				}
 			} catch (Exception e) {
 				e.getMessage();
 				break;
-			} finally {
-				if (key != null) {
-					key.channel().close();
-					key.cancel();
-				}
-			}
+			} /*
+				 * finally { if (key != null) { key.channel().close();
+				 * key.cancel(); } }
+				 */
 		}
 	}
 
@@ -112,7 +113,7 @@ public class chat {
 			socketChannel.configureBlocking(false);
 
 			// Register SocketChannel in the selector and wait for client
-			socketChannel.register(socketSelector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+			socketChannel.register(socketSelector, SelectionKey.OP_READ);
 			String rip = getRemoteIP(socketChannel);
 			System.out.println("New connection from: " + rip);
 
@@ -129,7 +130,7 @@ public class chat {
 		readBuffer = ByteBuffer.allocate(9000);
 		SocketChannel socketChannel = (SocketChannel) key.channel();
 		String remoteIp = getRemoteIP(socketChannel);
-		int numRead = -1;
+		int numRead;
 		try {
 			readBuffer.clear();
 			numRead = socketChannel.read(readBuffer);
@@ -170,19 +171,16 @@ public class chat {
 		try {
 			int destPort = Integer.parseInt(dstPrt);
 			socketChannel = SocketChannel.open();
-
-			if (destIp.equals(getMyIp()) || destIp.toLowerCase().equals("localhost") || destIp.equals("127.0.0.1")) {
-				System.out.println("The connection request is from the same computer");
-				conExists = true;
-			} else {
-				for (int i = 0; i < connections.size(); i++) {
-					if (destIp.equals(connections.get(i).getConnectionIp())) {
-						System.out.println("The connection already exists");
-						conExists = true;
-					}
-				}
-			}
-
+			/*
+			 * if (destIp.equals(getMyIp()) ||
+			 * destIp.toLowerCase().equals("localhost") ||
+			 * destIp.equals("127.0.0.1")) { System.out.println(
+			 * "The connection request is from the same computer"); conExists =
+			 * true; } else { for (int i = 0; i < connections.size(); i++) { if
+			 * (destIp.equals(connections.get(i).getConnectionIp())) {
+			 * System.out.println("The connection already exists"); conExists =
+			 * true; } } }
+			 */
 			socketChannel.socket().setSoTimeout(timeout);
 			if (!conExists) {
 				isa = new InetSocketAddress(destIp, destPort);
@@ -196,9 +194,9 @@ public class chat {
 			}
 		} catch (Exception e) {
 			System.out.println("connection is not made correctly");
-		} finally {
+		} /*finally {
 			socketChannel.close();
-		}
+		}*/
 	}
 
 	public void list() throws IOException {
@@ -284,8 +282,8 @@ public class chat {
 				 * if (command.length > 3) printErrorMsg("Too many arguments");
 				 * else connect(command[1], command[2]);
 				 */
-
-				connect("localhost", "1111");
+				connect(command[1], command[2]);
+				// connect("localhost", "1111");
 
 				break;
 			case "list":

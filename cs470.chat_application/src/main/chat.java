@@ -1,3 +1,15 @@
+/*
+ * CS470 - Project 1
+ * Developers:
+ * Rafik Keshishians
+ * Salem Alharbi
+ * 
+ * 
+ * Online source used: Java NIO SocketChannel (non-blocking IO)
+ * URL:     http://tutorials.jenkov.com/java-nio/index.html
+ * 
+ * 
+ */
 package main;
 
 import java.io.*;

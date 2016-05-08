@@ -14,7 +14,7 @@ public class chatOld {
 	private int myPortNumber = 4444;
 	private String myIp;
 	private boolean exit = false;
-	private List<Connection> connections = new ArrayList<Connection>();
+	private List<Connection1> connections = new ArrayList<Connection1>();
 	private ServerSocketChannel serverSocketChannel;
 	private Selector socketSelector;
 	private ByteBuffer readBuffer;
@@ -222,7 +222,7 @@ public class chatOld {
 
 				System.out.println("The connection to peer " + destIp + " is successfully established;");
 
-				Connection con = new Connection(socketChannel, destIp, destPort, destPort);
+				Connection1 con = new Connection1(socketChannel, destIp, destPort, destPort);
 
 				connections.add(con);
 
@@ -242,7 +242,7 @@ public class chatOld {
 				socketChannel.connect(isa);
 				socketChannel.configureBlocking(false);
 				// myPortNumber is only for display it is not a real port number
-				Connection con = new Connection(socketChannel, destIp, myPortNumber, destPort);
+				Connection1 con = new Connection1(socketChannel, destIp, myPortNumber, destPort);
 
 				connections.add(con);
 			}
@@ -441,14 +441,13 @@ public class chatOld {
 
 
 
-/*
-class Connection {
+class Connection1 {
 	private SocketChannel socketChannel;
 	private String connectionIp;
 	private int displayPort;
 	private int realPort;
 
-	public Connection(SocketChannel socketChannel, String connectionIp, int desplayPort, int realPort) {
+	public Connection1(SocketChannel socketChannel, String connectionIp, int desplayPort, int realPort) {
 		super();
 		this.socketChannel = socketChannel;
 		this.connectionIp = connectionIp;
@@ -487,4 +486,4 @@ class Connection {
 	public void setRealPort(int realPort) {
 		this.realPort = realPort;
 	}
-}*/
+}

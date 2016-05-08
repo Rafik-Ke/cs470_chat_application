@@ -82,14 +82,11 @@ public class chat {
 					// from a connection new connection request
 					else if (key.isAcceptable()) {
 						this.accept(key);
-						return;
 						// connection already exists, reading message
 					} else if (key.isReadable()) {
 						this.read(key);
-						return;
 					} else if (key.isConnectable()) {
 						System.out.println("is connectable");
-						return;
 					}
 
 				}

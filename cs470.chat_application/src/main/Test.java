@@ -75,14 +75,19 @@ public class Test {
 		try {
 			while (!exit) {
 				boolean conExists = false;
+				
+				System.out.println(" before socket ");
+				
 				socket = srvSocket.accept();
+				
+				System.out.println("after socket ");
 				
 				InputStreamReader instrReader = new InputStreamReader(socket.getInputStream());
 				BufferedReader br = new BufferedReader(instrReader);
 
 				String msg = br.readLine();
 
-				for (Socket i : socketList)
+/*				for (Socket i : socketList)
 					if (i.getRemoteSocketAddress().equals(socket.getRemoteSocketAddress())) {
 						System.out.println("The connection exists");
 						conExists = true;
@@ -90,7 +95,8 @@ public class Test {
 				if (myip().equals(socket.getRemoteSocketAddress())){
 					conExists = true;
 					System.out.println("The connection from the same computer");
-				}
+				}*/
+				
 				if (msg != null && msg.equals("client") && !conExists) {
 					socketList.add(socket);
 					portList.add("" + 50001);
@@ -102,8 +108,8 @@ public class Test {
 		} catch (Exception e) {
 
 		} finally {
-			if (socket != null && !socket.isClosed())
-				socket.close();
+/*			if (socket != null && !socket.isClosed())
+				socket.close();*/
 		}
 	}
 	

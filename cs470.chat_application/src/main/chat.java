@@ -168,16 +168,19 @@ public class chat {
 		try {
 			int destPort = Integer.parseInt(dstPrt);
 			socketChannel = SocketChannel.open();
-			/*
-			 * if (destIp.equals(getMyIp()) ||
-			 * destIp.toLowerCase().equals("localhost") ||
-			 * destIp.equals("127.0.0.1")) { System.out.println(
-			 * "The connection request is from the same computer"); conExists =
-			 * true; } else { for (int i = 0; i < connections.size(); i++) { if
-			 * (destIp.equals(connections.get(i).getConnectionIp())) {
-			 * System.out.println("The connection already exists"); conExists =
-			 * true; } } }
-			 */
+
+			if (destIp.equals(getMyIp()) || destIp.toLowerCase().equals("localhost") || destIp.equals("127.0.0.1")) {
+				System.out.println("The connection request is from the same computer");
+				conExists = true;
+			} else {
+				for (int i = 0; i < connections.size(); i++) {
+					if (destIp.equals(connections.get(i).getConnectionIp()) && dstPrt.equals(connections.get(i).getDisplayPort())) {
+						System.out.println("The connection already exists");
+						conExists = true;
+					}
+				}
+			}
+
 			socketChannel.socket().setSoTimeout(timeout);
 			if (!conExists) {
 				isa = new InetSocketAddress(destIp, destPort);
@@ -191,9 +194,9 @@ public class chat {
 			}
 		} catch (Exception e) {
 			System.out.println("connection is not made correctly");
-		} /*finally {
-			socketChannel.close();
-		}*/
+		} /*
+			 * finally { socketChannel.close(); }
+			 */
 	}
 
 	public void list() throws IOException {

@@ -42,7 +42,7 @@ public class chat {
 	public static void main(String[] args) throws Exception {
 		chat chatApp = new chat();
 		try {
-			// chatApp.setMyPortNumber(Integer.parseInt(args[0]));
+			chatApp.setMyPortNumber(Integer.parseInt(args[0]));
 			chatApp.serverRunner();
 			chatApp.takeInput();
 		} catch (Exception e) {
@@ -51,12 +51,10 @@ public class chat {
 	}
 
 	/**
-	 * Returns void. initiates socketselector by opening a selector Initiates a
-	 * serversocketchannel and opens the channel for coming connection
-	 * configures the connection to not get closed binds the connection with the
-	 * host port number
-	 * 
-	 * runs the server thread
+	 * Returns void. Initiates socketselector by opening a selector and
+	 * Initiates a serversocketchannel and opens the channel for coming
+	 * connections; configures the connection to not get closed and binds the
+	 * connection with the host port number and runs the server on a new thread
 	 */
 	public void serverRunner() throws IOException {
 		socketSelector = Selector.open();
@@ -78,9 +76,10 @@ public class chat {
 	}
 
 	/**
-	 * Returns void. runs on a separate thread in a while loop until the user
-	 * exits the program waits for a request to either create a new connection
-	 * or read the request
+	 * Returns void. 
+	 * Runs on a separate thread in a while loop until the user
+	 * exits the program; it waits for a request to either create a new
+	 * connection or read the request from an existing connection
 	 *
 	 */
 	public void server() throws Exception {
@@ -90,7 +89,7 @@ public class chat {
 		while (!exit) {
 			try {
 				/**
-				 * Wait for an event one of the registered channels
+				 * Wait for an event from one of the registered channels
 				 */
 				socketSelector.select();
 
@@ -103,11 +102,15 @@ public class chat {
 					if (!key.isValid()) {
 						continue;
 					}
-					// check the request is a new connection or reading
-					// from a connection new connection request
+					/**
+					 * check if the request is to make a new connection or reading from a
+					 * connection new connection request
+					 */
 					else if (key.isAcceptable()) {
 						this.accept(key);
-						// connection already exists, reading message
+						/**
+						 * connection already exists, call read method to read the message
+						 */
 					} else if (key.isReadable()) {
 						this.read(key);
 					} else if (key.isConnectable()) {
@@ -125,10 +128,10 @@ public class chat {
 	}
 
 	/**
-	 * Returns void. creates a new connection by using the selector key
+	 * Returns void. 
+	 * creates a new connection by using the selector key
 	 * 
-	 * @param key
-	 *            Selection key for socket selector passed by a related event
+	 * @param key Selection key for socket selector passed by a related event
 	 */
 	private void accept(SelectionKey key) throws IOException {
 
@@ -154,10 +157,9 @@ public class chat {
 	}
 
 	/**
-	 * Returns void. reading the message using the key of the socketchannel
-	 * 
-	 * @param key
-	 *            Selection key for socket selector passed by a related event
+	 * Returns void. 
+	 * Reading the message using the key of the socketchannel
+	 * @param key Selection key for socket selector passed by a related event
 	 */
 	private void read(SelectionKey key) throws IOException {
 		readBuffer = ByteBuffer.allocate(9000);
@@ -177,7 +179,7 @@ public class chat {
 
 			if (!message.equals("xxxit"))
 				System.out.println("Message received from " + getRemoteIP(socketChannel) + ": " + message);
-			else{
+			else {
 				exitMsg = true;
 				System.out.println("Peer " + remoteIp + " exited");
 			}
@@ -197,12 +199,11 @@ public class chat {
 	}
 
 	/**
-	 * Returns void. sends message to the server
+	 * Returns void. 
+	 * sends message to the server
 	 * 
-	 * @param conId
-	 *            the index of the peer server
-	 * @param msg
-	 *            the message that is passed from client to the server
+	 * @param conId the index of the peer server
+	 * @param msg the message that is passed from client to the server
 	 */
 	public void send(String conId, String msg) throws IOException {
 		int id = Integer.parseInt(conId) - 1;
@@ -215,12 +216,11 @@ public class chat {
 	}
 
 	/**
-	 * Returns void. makes a client connection to the destination peer
+	 * Returns void. 
+	 * Makes a client connection to the destination peer
 	 * 
-	 * @param destIp
-	 *            the destination peer IP address
-	 * @param dstPrt
-	 *            the destination peer port number
+	 * @param destIp the destination peer IP address
+	 * @param dstPrt the destination peer port number
 	 */
 	public void connect(String destIp, String dstPrt) throws Exception {
 		SocketChannel socketChannel = null;
@@ -262,7 +262,8 @@ public class chat {
 	}
 
 	/**
-	 * Returns void. displays the list of the current connections specifying the
+	 * Returns void. 
+	 * displays the list of the current connections specifying the
 	 * host peer is a client or a server
 	 */
 	public void list() throws IOException {
@@ -277,45 +278,48 @@ public class chat {
 	}
 
 	/**
-	 * Returns void. Implementations of terminate command Terminates connection
+	 * Returns void. 
+	 * Implementations of terminate command Terminates connection
 	 * with a specific user.
 	 * 
-	 * @param conId
-	 *            Index of user in list.
-	 * @param exit to control the exit message
+	 * @param conId Index of user in list.
+	 * @param terminate to control the exit message
 	 * 
 	 */
-	public void terminate(String conId, boolean exit) {
+	public void terminate(String conId, boolean terminate) {
 		try {
 			int id = Integer.parseInt(conId) - 1;
-			if (exit)
+			if (!terminate)
 				send(conId, "xxxit");
 			Thread.sleep(100);
 			connections.get(id).getSocketChannel().socket().close();
 			connections.get(id).getSocketChannel().close();
 			connections.remove(id);
 		} catch (Exception e) {
-			if (!exit)
+			if (terminate)
 				System.out.println("Please enter the ID within the list.");
 		}
 	}
 
 	/**
-	 * Returns void. Implementation of exit command means exit from program and
+	 * Returns void. 
+	 * Implementation of exit command means exit from program and
 	 * tells other users that connection is terminated.
 	 */
-	public void exit() throws IOException {
+	public void exit() throws Exception {
 		this.exit = true;
 		// terminate all the connections
 		for (int i = 0; i < connections.size(); i++) {
-			terminate("" + i, true);
+			terminate("" + i, false);
 		}
+		Thread.sleep(100);
 		socketSelector.close();
 		serverSocketChannel.close();
 	}
 
 	/**
-	 * Returns int. Implmenation of myport command will display user's port
+	 * Returns int. 
+	 * Implmenation of myport command will display user's port
 	 * number that program is currently running on and also it uses to receive
 	 * the connetion requests.
 	 */
@@ -324,11 +328,11 @@ public class chat {
 	}
 
 	/**
-	 * Returns void. assigns the port number that program is running on to
+	 * Returns void. 
+	 * Assigns the port number that program is running on to
 	 * myPortNumber.
 	 * 
-	 * @param port
-	 *            a command line argument and it does not change.
+	 * @param port a command line argument and it does not change.
 	 * 
 	 */
 	public void setMyPortNumber(int port) {
@@ -344,19 +348,19 @@ public class chat {
 	}
 
 	/**
-	 * Returns String. Getter that returns the passing PocketChannel peer IP
+	 * Returns String. 
+	 * Getter that returns the passing PocketChannel peer IP
 	 * address. and depends on the network and router.
 	 * 
-	 * @param socketChannel
-	 *            a SocketChannel object that is asked for its IP address
+	 * @param socketChannel a SocketChannel object that is asked for its IP address
 	 */
 	public String getRemoteIP(SocketChannel socketChannel) throws IOException {
 		return socketChannel.getRemoteAddress().toString().replace("/", "").split(":")[0];
 	}
 
 	/**
-	 * Returns void. Takes user's input, checks for correct input and calls the
-	 * appropriate method.
+	 * Returns void. 
+	 * Takes user's input, checks for correct input and calls the appropriate method.
 	 */
 	public void takeInput() throws Exception {
 		Scanner keyboard;
@@ -388,13 +392,15 @@ public class chat {
 					System.out.println("The program runs on port number " + getMyPortNumber());
 				break;
 			case "connect":
-				/*
-				 * if (command.length == 1) printErrorMsg(
-				 * "The destination is not specified"); else if (command.length
-				 * == 2) printErrorMsg("The port number is not specified"); else
-				 * if (command.length > 3) printErrorMsg("Too many arguments");
-				 * else connect(command[1], command[2]);
-				 */
+
+				if (command.length == 1)
+					printErrorMsg("The destination is not specified");
+				else if (command.length == 2)
+					printErrorMsg("The port number is not specified");
+				else if (command.length > 3)
+					printErrorMsg("Too many arguments");
+				else
+					connect(command[1], command[2]);
 				connect(command[1], command[2]);
 				// connect("localhost", "1111");
 
@@ -436,7 +442,8 @@ public class chat {
 	}
 
 	/**
-	 * Returns void. Implementation of help command will display the available
+	 * Returns void. 
+	 * Implementation of help command will display the available
 	 * commands for user which are represented the program's options.
 	 */
 	public void help() throws Exception {

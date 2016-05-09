@@ -1,12 +1,21 @@
-/*
+/**
  * CS470 - Project 1
  * Developers:
  * Rafik Keshishians
  * Salem Alharbi
  * 
+ * Client Server Chat application working on TCP
+ * Each peer can make connection to multiple computer; 
+ * each peer initiating the connection becomes the client
+ * and can send message to the other peer which is a server peer.
+ * Therefore, to send a message to a peer that is already connected as a client,
+ * a client initiation should be sent to the destination machine first.
  * 
- * Online source used: Java NIO SocketChannel (non-blocking IO)
- * URL:     http://tutorials.jenkov.com/java-nio/index.html
+ * For the project Java NIO non-blocking IO is used that each socket channel remains open after 
+ * making a handshake. 
+ * 
+ * Online training source: Java NIO SocketChannel (non-blocking IO)
+ * URL:    			 http://tutorials.jenkov.com/java-nio/index.html
  * 
  * 
  */
@@ -19,7 +28,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.nio.channels.spi.SelectorProvider;
 import java.util.*;
 
 public class chat {
@@ -63,10 +71,12 @@ public class chat {
 	public void server() throws Exception {
 		// boolean conExists; //no need because client will not send connect
 		SelectionKey key = null;
+
 		while (!exit) {
-			// conExists = false;
 			try {
-				// Wait for an event one of the registered channels
+				/**
+				 * Wait for an event one of the registered channels
+				 */
 				socketSelector.select();
 
 				// Iterate over the set of keys for events
@@ -88,23 +98,28 @@ public class chat {
 					} else if (key.isConnectable()) {
 						System.out.println("is connectable");
 					}
-
 				}
+
 			} catch (Exception e) {
+				System.out.println("Please rerun the program fatal error");
 				e.getMessage();
-				break;
-			} /*
-				 * finally { if (key != null) { key.channel().close();
-				 * key.cancel(); } }
-				 */
+			} /*finally {
+				if (key != null) {
+					key.channel().close();
+					key.cancel();
+				}
+			}*/
 		}
 	}
 
 	// creates a new connection by using the selector key
-	private void accept(SelectionKey key) {
+	private void accept(SelectionKey key) throws IOException {
+
+		ServerSocketChannel serverSocketChannel = null;
+		SocketChannel socketChannel = null;
 		try {
-			ServerSocketChannel serverSocketChannel = (ServerSocketChannel) key.channel();
-			SocketChannel socketChannel = serverSocketChannel.accept();
+			serverSocketChannel = (ServerSocketChannel) key.channel();
+			socketChannel = serverSocketChannel.accept();
 
 			// Socket socket = socketChannel.socket();
 			socketChannel.configureBlocking(false);
@@ -119,16 +134,26 @@ public class chat {
 
 		} catch (Exception e) {
 			e.printStackTrace();
-		}
+		} /*finally {
+			socketChannel.close();
+			serverSocketChannel.close();
+			if (key != null) {
+				key.channel().close();
+				key.cancel();
+			}
+
+		}*/
 	}
 
 	// reading the message using the key of the socketchannel
 	private void read(SelectionKey key) throws IOException {
 		readBuffer = ByteBuffer.allocate(9000);
-		SocketChannel socketChannel = (SocketChannel) key.channel();
-		String remoteIp = getRemoteIP(socketChannel);
+		SocketChannel socketChannel = null;
+		String remoteIp = "";
 		int numRead;
 		try {
+			socketChannel = (SocketChannel) key.channel();
+			remoteIp = getRemoteIP(socketChannel);
 			readBuffer.clear();
 			numRead = socketChannel.read(readBuffer);
 			byte[] data = new byte[numRead];
@@ -147,7 +172,13 @@ public class chat {
 					connections.remove(i);
 			// e.printStackTrace();
 			return;
-		}
+		} /*finally {
+			socketChannel.close();
+			if (key != null) {
+				key.channel().close();
+				key.cancel();
+			}
+		}*/
 	}
 
 	public void send(String conId, String msg) throws IOException {
@@ -161,32 +192,31 @@ public class chat {
 	}
 
 	public void connect(String destIp, String dstPrt) throws Exception {
+
 		SocketChannel socketChannel = null;
 		InetSocketAddress isa = null;
-		int timeout = 5000;
+		int timeout = 2000;
 		boolean conExists = false;
 		try {
 			int destPort = Integer.parseInt(dstPrt);
 			socketChannel = SocketChannel.open();
 
-			if (destIp.equals(getMyIp()) || destIp.toLowerCase().equals("localhost") || destIp.equals("127.0.0.1")) {
-				System.out.println("The connection request is from the same computer");
-				conExists = true;
-			} else {
-				for (int i = 0; i < connections.size(); i++) {
-					if (destIp.equals(connections.get(i).getConnectionIp()) && dstPrt.equals(connections.get(i).getDisplayPort())) {
-						System.out.println("The connection already exists");
-						conExists = true;
-					}
-				}
-			}
-
+			/*
+			 * if (destIp.equals(getMyIp()) ||
+			 * destIp.toLowerCase().equals("localhost") ||
+			 * destIp.equals("127.0.0.1")) { System.out.println(
+			 * "The connection request is from the same computer"); conExists =
+			 * true; return; } else { for (int i = 0; i < connections.size();
+			 * i++) { if (destIp.equals(connections.get(i).getConnectionIp()) &&
+			 * destPort == connections.get(i).getDisplayPort()) {
+			 * System.out.println("The connection already exists"); conExists =
+			 * true; return; } } }
+			 */
 			socketChannel.socket().setSoTimeout(timeout);
 			if (!conExists) {
 				isa = new InetSocketAddress(destIp, destPort);
-				socketChannel.connect(isa);
+				socketChannel.socket().connect(isa, timeout);
 				socketChannel.configureBlocking(false);
-
 				System.out.println("The connection to peer " + destIp + " is successfully established;");
 				Connection con = new Connection(socketChannel, destIp, destPort, "client");
 				connections.add(con);
@@ -194,9 +224,8 @@ public class chat {
 			}
 		} catch (Exception e) {
 			System.out.println("connection is not made correctly");
-		} /*
-			 * finally { socketChannel.close(); }
-			 */
+		}
+
 	}
 
 	public void list() throws IOException {
@@ -208,6 +237,14 @@ public class chat {
 		}
 	}
 
+	/**
+	 * Returns void. Implementation of terminate command Terminates connection
+	 * with a specific user.
+	 * 
+	 * @param conId
+	 *            Index of user in list.
+	 * 
+	 */
 	public void terminate(String conId) {
 		try {
 			int id = Integer.parseInt(conId) - 1;
@@ -219,6 +256,10 @@ public class chat {
 		}
 	}
 
+	/**
+	 * Returns void. Implementation of exit command means exit from program and
+	 * tells other users that connection is terminated.
+	 */
 	public void exit() throws IOException {
 		this.exit = true;
 		// terminate all the connections
@@ -229,22 +270,50 @@ public class chat {
 		serverSocketChannel.close();
 	}
 
+	/**
+	 * Returns int. Implmenation of myport command will display user's port
+	 * number that program is currently running on and also it uses to receive
+	 * the connetion requests.
+	 */
 	public int getMyPortNumber() {
 		return this.myPortNumber;
 	}
 
+	/**
+	 * Returns void. assigns the port number that program is running on to
+	 * myPortNumber.
+	 * 
+	 * @param port
+	 *            a command line argument and it does not change.
+	 * 
+	 */
 	public void setMyPortNumber(int port) {
 		this.myPortNumber = port;
 	}
 
+	/**
+	 * Returns String. Getter that returns the current machine-peer IP address.
+	 * and depends on the network and router.
+	 */
 	public String getMyIp() throws UnknownHostException {
 		return Inet4Address.getLocalHost().getHostAddress();
 	}
 
-	public String getRemoteIP(SocketChannel sc) throws IOException {
-		return sc.getRemoteAddress().toString().replace("/", "").split(":")[0];
+	/**
+	 * Returns String. Getter that returns the passing PocketChannel peer IP
+	 * address. and depends on the network and router.
+	 * 
+	 * @param socketChannel
+	 *            a SocketChannel object that is asked for its IP address
+	 */
+	public String getRemoteIP(SocketChannel socketChannel) throws IOException {
+		return socketChannel.getRemoteAddress().toString().replace("/", "").split(":")[0];
 	}
 
+	/**
+	 * Returns void. Takes user's input, checks for correct input and calls the
+	 * appropriate method.
+	 */
 	public void takeInput() throws Exception {
 		Scanner keyboard;
 		String input;
@@ -253,9 +322,9 @@ public class chat {
 		while (!exit) {
 			keyboard = new Scanner(System.in);
 			input = keyboard.nextLine();
-			input = input.toLowerCase().trim();
+			input = input.trim();
 			command = input.split("\\s+");
-			switch (command[0]) {
+			switch (command[0].toLowerCase()) {
 			case "help":
 				if (command.length > 1)
 					System.out.println("Too many arguments");
@@ -322,6 +391,10 @@ public class chat {
 		}
 	}
 
+	/**
+	 * Returns void. Implementation of help command will display the available
+	 * commands for user which are represented the program's options.
+	 */
 	public void help() throws Exception {
 		System.out.println(
 				"|*******************************************HELP MENU*****************************************|");
@@ -373,6 +446,10 @@ public class chat {
 	}
 }
 
+/**
+ * Helper class to hold information about the connections
+ * 
+ */
 class Connection {
 	private SocketChannel socketChannel;
 	private String connectionIp;

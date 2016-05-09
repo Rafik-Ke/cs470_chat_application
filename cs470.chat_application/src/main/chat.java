@@ -17,8 +17,8 @@
  * Online training source: Java NIO SocketChannel (non-blocking IO)
  * URL:    			 http://tutorials.jenkov.com/java-nio/index.html
  * 
- * 
  */
+
 package main;
 
 import java.io.*;
@@ -49,6 +49,15 @@ public class chat {
 		}
 	}
 
+	/**
+	 * Returns void.
+	 * initiates socketselector by opening a selector
+	 * Initiates a serversocketchannel and opens the channel for coming connection
+	 * configures the connection to not get closed
+	 * binds the connection with the host port number
+	 * 
+	 *runs the server thread 
+	 */
 	public void serverRunner() throws IOException {
 		socketSelector = Selector.open();
 		serverSocketChannel = ServerSocketChannel.open();
@@ -68,6 +77,12 @@ public class chat {
 		t.start();
 	}
 
+	/**
+	 * Returns void.
+	 * runs on a separate thread in a while loop until the user exits the program
+	 * waits for a request to either create a new connection or read the request
+	 *
+	 */
 	public void server() throws Exception {
 		// boolean conExists; //no need because client will not send connect
 		SelectionKey key = null;
@@ -103,16 +118,14 @@ public class chat {
 			} catch (Exception e) {
 				System.out.println("Please rerun the program fatal error");
 				e.getMessage();
-			} /*finally {
-				if (key != null) {
-					key.channel().close();
-					key.cancel();
-				}
-			}*/
+			}
 		}
 	}
-
-	// creates a new connection by using the selector key
+	/**
+	 * Returns void.
+	 * creates a new connection by using the selector key
+	 * @param key Selection key for socket selector passed by a related event
+	 */
 	private void accept(SelectionKey key) throws IOException {
 
 		ServerSocketChannel serverSocketChannel = null;
@@ -121,7 +134,6 @@ public class chat {
 			serverSocketChannel = (ServerSocketChannel) key.channel();
 			socketChannel = serverSocketChannel.accept();
 
-			// Socket socket = socketChannel.socket();
 			socketChannel.configureBlocking(false);
 
 			// Register SocketChannel in the selector and wait for client
@@ -134,18 +146,14 @@ public class chat {
 
 		} catch (Exception e) {
 			e.printStackTrace();
-		} /*finally {
-			socketChannel.close();
-			serverSocketChannel.close();
-			if (key != null) {
-				key.channel().close();
-				key.cancel();
-			}
-
-		}*/
+		}
 	}
-
-	// reading the message using the key of the socketchannel
+	
+	/**
+	 * Returns void.
+	 * reading the message using the key of the socketchannel
+	 * @param key Selection key for socket selector passed by a related event
+	 */
 	private void read(SelectionKey key) throws IOException {
 		readBuffer = ByteBuffer.allocate(9000);
 		SocketChannel socketChannel = null;
@@ -172,15 +180,15 @@ public class chat {
 					connections.remove(i);
 			// e.printStackTrace();
 			return;
-		} /*finally {
-			socketChannel.close();
-			if (key != null) {
-				key.channel().close();
-				key.cancel();
-			}
-		}*/
+		}
 	}
-
+	
+	/**
+	 * Returns void.
+	 * sends message to the server
+	 * @param conId the index of the peer server
+	 * @param msg the message that is passed from client to the server
+	 */
 	public void send(String conId, String msg) throws IOException {
 		int id = Integer.parseInt(conId) - 1;
 		byte[] message = new String(msg).getBytes();
@@ -190,9 +198,13 @@ public class chat {
 		}
 		buffer.clear();
 	}
-
+	/**
+	 * Returns void.
+	 * makes a client connection to the destination peer
+	 * @param destIp the destination peer IP address
+	 * @param dstPrt the destination peer port number
+	 */
 	public void connect(String destIp, String dstPrt) throws Exception {
-
 		SocketChannel socketChannel = null;
 		InetSocketAddress isa = null;
 		int timeout = 2000;
@@ -201,17 +213,21 @@ public class chat {
 			int destPort = Integer.parseInt(dstPrt);
 			socketChannel = SocketChannel.open();
 
-			/*
-			 * if (destIp.equals(getMyIp()) ||
-			 * destIp.toLowerCase().equals("localhost") ||
-			 * destIp.equals("127.0.0.1")) { System.out.println(
-			 * "The connection request is from the same computer"); conExists =
-			 * true; return; } else { for (int i = 0; i < connections.size();
-			 * i++) { if (destIp.equals(connections.get(i).getConnectionIp()) &&
-			 * destPort == connections.get(i).getDisplayPort()) {
-			 * System.out.println("The connection already exists"); conExists =
-			 * true; return; } } }
-			 */
+			if (destIp.equals(getMyIp()) || destIp.toLowerCase().equals("localhost") || destIp.equals("127.0.0.1")) {
+				System.out.println("The connection request is from the same computer");
+				conExists = true;
+				return;
+			} else {
+				for (int i = 0; i < connections.size(); i++) {
+					if (destIp.equals(connections.get(i).getConnectionIp())
+							&& destPort == connections.get(i).getDisplayPort()) {
+						System.out.println("The connection already exists");
+						conExists = true;
+						return;
+					}
+				}
+			}
+
 			socketChannel.socket().setSoTimeout(timeout);
 			if (!conExists) {
 				isa = new InetSocketAddress(destIp, destPort);
@@ -225,24 +241,27 @@ public class chat {
 		} catch (Exception e) {
 			System.out.println("connection is not made correctly");
 		}
-
 	}
-
+	/**
+	 * Returns void.
+	 * displays the list of the current connections specifying the host peer is a client or a server
+	 */
 	public void list() throws IOException {
-		System.out.println("id: IP address               Port No.	Connection Type");
+		System.out.printf("%-7s%5s%18s%25s\n", "id:", "IP address", "Port No.", "Connection Type");
+		System.out.println("-------------------------------------------------------------");
 		for (int i = 0; i < connections.size(); i++) {
 			if (connections.get(i).getSocketChannel().isConnected() && connections.get(i).getSocketChannel().isOpen())
-				System.out.println((i + 1) + " " + connections.get(i).getConnectionIp() + " "
-						+ connections.get(i).getDisplayPort() + " " + connections.get(i).getType());
+				System.out.printf("%-7d%5s%17d%20s\n", (i + 1), connections.get(i).getConnectionIp(),
+						connections.get(i).getDisplayPort(), connections.get(i).getType());
 		}
 	}
 
 	/**
-	 * Returns void. Implementation of terminate command Terminates connection
+	 * Returns void. 
+	 * Implementations of terminate command Terminates connection
 	 * with a specific user.
 	 * 
-	 * @param conId
-	 *            Index of user in list.
+	 * @param conId Index of user in list.
 	 * 
 	 */
 	public void terminate(String conId) {
@@ -283,8 +302,7 @@ public class chat {
 	 * Returns void. assigns the port number that program is running on to
 	 * myPortNumber.
 	 * 
-	 * @param port
-	 *            a command line argument and it does not change.
+	 * @param port a command line argument and it does not change.
 	 * 
 	 */
 	public void setMyPortNumber(int port) {
@@ -318,7 +336,7 @@ public class chat {
 		Scanner keyboard;
 		String input;
 		String[] command;
-		System.out.println("Enter help for list of commands");
+		System.out.println("Enter a command or enter \"help\" for list of commands");
 		while (!exit) {
 			keyboard = new Scanner(System.in);
 			input = keyboard.nextLine();
@@ -396,48 +414,35 @@ public class chat {
 	 * commands for user which are represented the program's options.
 	 */
 	public void help() throws Exception {
-		System.out.println(
-				"|*******************************************HELP MENU*****************************************|");
-		System.out.println(
-				"| 1) help                                                                                     |");
-		System.out.println("|\t\tDescription: Display the command options and their description.               |");
-		System.out.println(
-				"|---------------------------------------------------------------------------------------------|");
-		System.out.println(
-				"| 2) myip                                                                                     |");
-		System.out.println("|\t\tDescription: Display the IP address.                                          |");
-		System.out.println(
-				"|---------------------------------------------------------------------------------------------|");
-		System.out.println(
-				"| 3) myport                                                                                   |");
-		System.out.println("|\t\tDescription: Display listening port.                                          |");
-		System.out.println(
-				"|---------------------------------------------------------------------------------------------|");
-		System.out.println(
-				"| 4) connect                                                                                  |");
-		System.out.println("|\t\tDescription: Establish connection with <destination IP> using <port number>.  |");
-		System.out.println(
-				"|---------------------------------------------------------------------------------------------|");
-		System.out.println(
-				"| 5) list                                                                                     |");
-		System.out.println("|\t\tDescription: Display list of connections.                                     |");
-		System.out.println(
-				"|---------------------------------------------------------------------------------------------|");
-		System.out.println(
-				"| 6) terminate                                                                                |");
-		System.out.println("|\t\tDescription: End connection with IP address of <connection id>.               |");
-		System.out.println(
-				"|---------------------------------------------------------------------------------------------|");
-		System.out.println(
-				"| 7) send                                                                                     |");
-		System.out.println("|\t\tDescription: Send <message> to IP address of <connection id>.                 |");
-		System.out.println(
-				"|---------------------------------------------------------------------------------------------|");
-		System.out.println(
-				"| 8) exit                                                                                     |");
-		System.out.println("|\t\tDescription: Exit program.                                                    |");
-		System.out.println(
-				"|*********************************************************************************************|");
+		System.out.println("|****************************HELP MENU***************************|");
+		System.out.println("| 1) help                                                        |");
+		System.out.println("|\tDescription: Display the command options and             |"
+				+ "\n|\t\t     their description.                          |");
+		System.out.println("|----------------------------------------------------------------|");
+		System.out.println("| 2) myip                                                        |");
+		System.out.println("|\tDescription: Display the IP address.                     |");
+		System.out.println("|----------------------------------------------------------------|");
+		System.out.println("| 3) myport                                                      |");
+		System.out.println("|\tDescription: Display listening port.                     |");
+		System.out.println("|----------------------------------------------------------------|");
+		System.out.println("| 4) connect                                                     |");
+		System.out.println("|\tDescription: Establish connection with <destination IP>  |"
+				+"\n|\t\t     using <port number>.                        |");
+		System.out.println("|----------------------------------------------------------------|");
+		System.out.println("| 5) list                                                        |");
+		System.out.println("|\tDescription: Display list of connections.                |");
+		System.out.println("|----------------------------------------------------------------|");
+		System.out.println("| 6) terminate                                                   |");
+		System.out.println("|\tDescription: End connection with IP address              |"
+				+ "\n|\t\t     of <connection id>.                         |");
+		System.out.println("|----------------------------------------------------------------|");
+		System.out.println("| 7) send                                                        |");
+		System.out.println("|\tDescription: Send <message> to IP address                |"
+				+ "\n|\t\t     of <connection id>.                         |");
+		System.out.println("|----------------------------------------------------------------|");
+		System.out.println("| 8) exit                                                        |");
+		System.out.println("|\tDescription: Exit program.                               |");
+		System.out.println("|****************************************************************|");
 	}
 
 	public void printErrorMsg(String msg) {
@@ -448,7 +453,6 @@ public class chat {
 
 /**
  * Helper class to hold information about the connections
- * 
  */
 class Connection {
 	private SocketChannel socketChannel;

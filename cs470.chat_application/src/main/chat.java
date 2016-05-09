@@ -37,6 +37,7 @@ public class chat {
 	private ServerSocketChannel serverSocketChannel;
 	private Selector socketSelector;
 	private ByteBuffer readBuffer;
+	private boolean exitMsg;
 
 	public static void main(String[] args) throws Exception {
 		chat chatApp = new chat();
@@ -50,13 +51,12 @@ public class chat {
 	}
 
 	/**
-	 * Returns void.
-	 * initiates socketselector by opening a selector
-	 * Initiates a serversocketchannel and opens the channel for coming connection
-	 * configures the connection to not get closed
-	 * binds the connection with the host port number
+	 * Returns void. initiates socketselector by opening a selector Initiates a
+	 * serversocketchannel and opens the channel for coming connection
+	 * configures the connection to not get closed binds the connection with the
+	 * host port number
 	 * 
-	 *runs the server thread 
+	 * runs the server thread
 	 */
 	public void serverRunner() throws IOException {
 		socketSelector = Selector.open();
@@ -78,9 +78,9 @@ public class chat {
 	}
 
 	/**
-	 * Returns void.
-	 * runs on a separate thread in a while loop until the user exits the program
-	 * waits for a request to either create a new connection or read the request
+	 * Returns void. runs on a separate thread in a while loop until the user
+	 * exits the program waits for a request to either create a new connection
+	 * or read the request
 	 *
 	 */
 	public void server() throws Exception {
@@ -116,15 +116,19 @@ public class chat {
 				}
 
 			} catch (Exception e) {
-				System.out.println("Please rerun the program fatal error");
-				e.getMessage();
+				/*
+				 * System.out.println("Please rerun the program fatal error");
+				 * e.getMessage();
+				 */
 			}
 		}
 	}
+
 	/**
-	 * Returns void.
-	 * creates a new connection by using the selector key
-	 * @param key Selection key for socket selector passed by a related event
+	 * Returns void. creates a new connection by using the selector key
+	 * 
+	 * @param key
+	 *            Selection key for socket selector passed by a related event
 	 */
 	private void accept(SelectionKey key) throws IOException {
 
@@ -148,17 +152,19 @@ public class chat {
 			e.printStackTrace();
 		}
 	}
-	
+
 	/**
-	 * Returns void.
-	 * reading the message using the key of the socketchannel
-	 * @param key Selection key for socket selector passed by a related event
+	 * Returns void. reading the message using the key of the socketchannel
+	 * 
+	 * @param key
+	 *            Selection key for socket selector passed by a related event
 	 */
 	private void read(SelectionKey key) throws IOException {
 		readBuffer = ByteBuffer.allocate(9000);
 		SocketChannel socketChannel = null;
 		String remoteIp = "";
 		int numRead;
+		String message = "";
 		try {
 			socketChannel = (SocketChannel) key.channel();
 			remoteIp = getRemoteIP(socketChannel);
@@ -167,11 +173,17 @@ public class chat {
 			byte[] data = new byte[numRead];
 
 			System.arraycopy(readBuffer.array(), 0, data, 0, numRead);
-			String message = new String(data);
+			message = new String(data);
 
-			System.out.println("Message received from " + getRemoteIP(socketChannel) + ": " + message);
+			if (!message.equals("xxxit"))
+				System.out.println("Message received from " + getRemoteIP(socketChannel) + ": " + message);
+			else{
+				exitMsg = true;
+				System.out.println("Peer " + remoteIp + " exited");
+			}
 		} catch (Exception e) {
-			System.out.println("Peer " + remoteIp + " terminates the connection");
+			if (!exitMsg)
+				System.out.println("Peer " + remoteIp + " terminates the connection");
 			key.channel().close();
 			key.cancel();
 			socketChannel.close();
@@ -179,15 +191,18 @@ public class chat {
 				if (connections.get(i).getConnectionIp().equals(remoteIp))
 					connections.remove(i);
 			// e.printStackTrace();
+			exitMsg = false;
 			return;
 		}
 	}
-	
+
 	/**
-	 * Returns void.
-	 * sends message to the server
-	 * @param conId the index of the peer server
-	 * @param msg the message that is passed from client to the server
+	 * Returns void. sends message to the server
+	 * 
+	 * @param conId
+	 *            the index of the peer server
+	 * @param msg
+	 *            the message that is passed from client to the server
 	 */
 	public void send(String conId, String msg) throws IOException {
 		int id = Integer.parseInt(conId) - 1;
@@ -198,11 +213,14 @@ public class chat {
 		}
 		buffer.clear();
 	}
+
 	/**
-	 * Returns void.
-	 * makes a client connection to the destination peer
-	 * @param destIp the destination peer IP address
-	 * @param dstPrt the destination peer port number
+	 * Returns void. makes a client connection to the destination peer
+	 * 
+	 * @param destIp
+	 *            the destination peer IP address
+	 * @param dstPrt
+	 *            the destination peer port number
 	 */
 	public void connect(String destIp, String dstPrt) throws Exception {
 		SocketChannel socketChannel = null;
@@ -242,9 +260,10 @@ public class chat {
 			System.out.println("connection is not made correctly");
 		}
 	}
+
 	/**
-	 * Returns void.
-	 * displays the list of the current connections specifying the host peer is a client or a server
+	 * Returns void. displays the list of the current connections specifying the
+	 * host peer is a client or a server
 	 */
 	public void list() throws IOException {
 		System.out.printf("%-7s%5s%18s%25s\n", "id:", "IP address", "Port No.", "Connection Type");
@@ -254,24 +273,30 @@ public class chat {
 				System.out.printf("%-7d%5s%17d%20s\n", (i + 1), connections.get(i).getConnectionIp(),
 						connections.get(i).getDisplayPort(), connections.get(i).getType());
 		}
+		System.out.println();
 	}
 
 	/**
-	 * Returns void. 
-	 * Implementations of terminate command Terminates connection
+	 * Returns void. Implementations of terminate command Terminates connection
 	 * with a specific user.
 	 * 
-	 * @param conId Index of user in list.
+	 * @param conId
+	 *            Index of user in list.
+	 * @param exit to control the exit message
 	 * 
 	 */
-	public void terminate(String conId) {
+	public void terminate(String conId, boolean exit) {
 		try {
 			int id = Integer.parseInt(conId) - 1;
+			if (exit)
+				send(conId, "xxxit");
+			Thread.sleep(100);
 			connections.get(id).getSocketChannel().socket().close();
 			connections.get(id).getSocketChannel().close();
 			connections.remove(id);
 		} catch (Exception e) {
-			System.out.println("Please enter the ID within the list.");
+			if (!exit)
+				System.out.println("Please enter the ID within the list.");
 		}
 	}
 
@@ -283,7 +308,7 @@ public class chat {
 		this.exit = true;
 		// terminate all the connections
 		for (int i = 0; i < connections.size(); i++) {
-			terminate("" + i);
+			terminate("" + i, true);
 		}
 		socketSelector.close();
 		serverSocketChannel.close();
@@ -302,7 +327,8 @@ public class chat {
 	 * Returns void. assigns the port number that program is running on to
 	 * myPortNumber.
 	 * 
-	 * @param port a command line argument and it does not change.
+	 * @param port
+	 *            a command line argument and it does not change.
 	 * 
 	 */
 	public void setMyPortNumber(int port) {
@@ -383,7 +409,7 @@ public class chat {
 				if (command.length == 1)
 					printErrorMsg("The connection ID is not specified");
 				else
-					terminate(command[1]);
+					terminate(command[1], false);
 				break;
 			case "send":
 				if (command.length == 1)
@@ -427,7 +453,7 @@ public class chat {
 		System.out.println("|----------------------------------------------------------------|");
 		System.out.println("| 4) connect                                                     |");
 		System.out.println("|\tDescription: Establish connection with <destination IP>  |"
-				+"\n|\t\t     using <port number>.                        |");
+				+ "\n|\t\t     using <port number>.                        |");
 		System.out.println("|----------------------------------------------------------------|");
 		System.out.println("| 5) list                                                        |");
 		System.out.println("|\tDescription: Display list of connections.                |");
